@@ -26,11 +26,32 @@ jobs:
       - name: Get Dependencies
         run: flutter pub get
 
-      - name: Build Windows x64 Release (Inner Release)
+      - name: Read Version from pubspec.yaml
+        id: version
+        run: |
+          version=$(grep '^version:' pubspec.yaml | awk '{print $2}')
+          echo "VERSION=$version" >> $GITHUB_ENV
+
+      - name: Build Windows x64 Release
         run: flutter build windows --release
 
-      - name: Upload Inner Build Artifact
+      - name: Zip Release
+        run: |
+          mkdir release
+          powershell Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath release/nexxpharma-${{ env.VERSION }}.zip
+
+      - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: inner-windows-x64
-          path: build/windows/x64/runner/Release/
+          name: nexxpharma-windows-release
+          path: release/nexxpharma-${{ env.VERSION }}.zip
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v${{ env.VERSION }}
+          name: nexxpharma v${{ env.VERSION }}
+          files: release/nexxpharma-${{ env.VERSION }}.zip
+          draft: false
+          prerelease: false

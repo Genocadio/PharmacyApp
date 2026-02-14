@@ -5,6 +5,7 @@ import 'package:nexxpharma/services/auth_service.dart';
 import 'package:nexxpharma/services/dto/user_dto.dart';
 import 'package:nexxpharma/data/tables.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:nexxpharma/ui/widgets/toast.dart';
 
 class ActivationScreen extends StatefulWidget {
   final ActivationService activationService;
@@ -69,6 +70,12 @@ class _ActivationScreenState extends State<ActivationScreen> {
       _needsInitialSetup = needsSetup;
       _initializing = false;
     });
+    
+    // If already activated and has users, navigation will be handled by main.dart
+    // But trigger a refresh to ensure navigation happens
+    if (activated && !needsSetup) {
+      widget.onActivated();
+    }
   }
 
   Future<void> _requestPermission() async {
@@ -118,15 +125,9 @@ class _ActivationScreenState extends State<ActivationScreen> {
         await _checkStatus();
       } else {
         await _checkStatus();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                widget.activationService.error ?? 'Activation failed',
-              ),
-            ),
-          );
-        }
+        Toast.error(
+          widget.activationService.error ?? 'Activation failed',
+        );
       }
     }
   }
@@ -145,13 +146,9 @@ class _ActivationScreenState extends State<ActivationScreen> {
       if (success) {
         // Now fully activated and has a manager
         widget.onActivated();
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.authService.error ?? 'Failed to create manager',
-            ),
-          ),
+      } else {
+        Toast.error(
+          widget.authService.error ?? 'Failed to create manager',
         );
       }
     }
@@ -165,6 +162,11 @@ class _ActivationScreenState extends State<ActivationScreen> {
   @override
   Widget build(BuildContext context) {
     if (_initializing) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    // If already activated and has users, show loading while navigation happens
+    if (_isActivated && !_needsInitialSetup) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 

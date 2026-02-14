@@ -2,11 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:nexxpharma/services/auth_service.dart';
 import 'package:nexxpharma/services/dto/user_dto.dart';
 import 'package:nexxpharma/data/tables.dart';
+import 'package:nexxpharma/data/database.dart';
+import 'package:nexxpharma/ui/widgets/toast.dart';
 
 class UserManagementScreen extends StatefulWidget {
   final AuthService authService;
+  final AppDatabase database;
 
-  const UserManagementScreen({super.key, required this.authService});
+  const UserManagementScreen({
+    super.key,
+    required this.authService,
+    required this.database,
+  });
 
   @override
   State<UserManagementScreen> createState() => _UserManagementScreenState();
@@ -15,11 +22,13 @@ class UserManagementScreen extends StatefulWidget {
 class _UserManagementScreenState extends State<UserManagementScreen> {
   List<UserDTO> _users = [];
   bool _isLoading = true;
+  bool _supportMultiUsers = true; // Default to true for safety
 
   @override
   void initState() {
     super.initState();
     _loadUsers();
+    _loadDeviceSettings();
   }
 
   Future<void> _loadUsers() async {
@@ -40,7 +49,21 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     }
   }
 
+  Future<void> _loadDeviceSettings() async {
+    final device = await widget.database.getDevice();
+    if (device != null && mounted) {
+      setState(() {
+        _supportMultiUsers = device.supportMultiUsers;
+      });
+    }
+  }
+
   void _showAddUserDialog() {
+    // Check if multi-user is supported
+    if (!_supportMultiUsers) {
+      Toast.warning('Multi-user support is disabled for this device');
+      return;
+    }
     final formKey = GlobalKey<FormState>();
     final namesController = TextEditingController();
     final phoneController = TextEditingController();
@@ -256,20 +279,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                 if (context.mounted) {
                                   Navigator.pop(context);
                                   _loadUsers();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('User added successfully'),
-                                    ),
-                                  );
+                                  Toast.success('User added successfully');
                                 }
                               } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Failed to add user: $e'),
-                                    ),
-                                  );
-                                }
+                                Toast.error('Failed to add user: $e');
                               }
                             }
                           },
@@ -520,24 +533,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                 if (context.mounted) {
                                   Navigator.pop(context);
                                   _loadUsers();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'User updated successfully',
-                                      ),
-                                    ),
-                                  );
+                                  Toast.success('User updated successfully');
                                 }
                               } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Failed to update user: $e',
-                                      ),
-                                    ),
-                                  );
-                                }
+                                Toast.error('Failed to update user: $e');
                               }
                             }
                           },
@@ -642,10 +641,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 );
               },
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddUserDialog,
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: _supportMultiUsers
+          ? FloatingActionButton(
+              onPressed: _showAddUserDialog,
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 }

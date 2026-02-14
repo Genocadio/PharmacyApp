@@ -1196,4 +1196,26 @@ class AppDatabase extends _$AppDatabase {
   Future<void> deleteDevice() async {
     await delete(devices).go();
   }
+
+  /// Clear all data (used when registering a new device/fresh start)
+  /// Keeps only the module and device records but clears all operational data
+  Future<void> clearAllOperationalData() async {
+    // Clear all tables except modules and devices
+    await delete(users).go();
+    await delete(insurances).go();
+    await delete(products).go();
+    await delete(productInsurances).go();
+    await delete(stockIns).go();
+    await delete(stockOuts).go();
+    await delete(stockOutSales).go();
+    await delete(stockRequests).go();
+    await delete(stockRequestItems).go();
+  }
+
+  /// Complete reset - clears everything including module and device
+  Future<void> clearAllData() async {
+    await clearAllOperationalData();
+    await delete(modules).go();
+    await delete(devices).go();
+  }
 }

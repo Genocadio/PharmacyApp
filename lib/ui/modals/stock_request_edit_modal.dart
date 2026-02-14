@@ -4,6 +4,7 @@ import 'package:nexxpharma/data/database.dart';
 import 'package:nexxpharma/services/stock_request_service.dart';
 import 'package:nexxpharma/services/dto/stock_request_dto.dart';
 import 'package:uuid/uuid.dart';
+import 'package:nexxpharma/ui/widgets/toast.dart';
 
 class StockRequestEditModal extends StatefulWidget {
   final AppDatabase database;
@@ -117,9 +118,7 @@ class _StockRequestEditModalState extends State<StockRequestEditModal> {
 
   Future<void> _saveRequest({bool submit = false}) async {
     if (_items.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add at least one item')),
-      );
+      Toast.warning('Please add at least one item');
       return;
     }
 

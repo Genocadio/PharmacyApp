@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:nexxpharma/services/auth_service.dart';
 import 'package:nexxpharma/services/dto/user_dto.dart';
 import 'package:nexxpharma/data/tables.dart';
+import 'package:nexxpharma/ui/widgets/toast.dart';
 
 class RegisterScreen extends StatefulWidget {
   final AuthService authService;
@@ -45,17 +46,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (success && mounted) {
         Navigator.pop(context); // Go back to login
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Registration successful! Please login.'),
-          ),
-        );
-      } else if (!success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(widget.authService.error ?? 'Registration failed'),
-          ),
-        );
+        Toast.success('Registration successful! Please login.');
+      } else if (!success) {
+        Toast.error(widget.authService.error ?? 'Registration failed');
       }
     }
   }

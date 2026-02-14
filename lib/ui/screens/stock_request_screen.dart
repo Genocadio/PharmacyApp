@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:nexxpharma/ui/modals/stock_request_edit_modal.dart';
 import 'package:nexxpharma/services/stock_request_pdf_service.dart';
 import 'package:printing/printing.dart';
+import 'package:nexxpharma/ui/widgets/toast.dart';
 
 class StockRequestScreen extends StatefulWidget {
   final AppDatabase database;
@@ -300,9 +301,7 @@ class _StockRequestScreenState extends State<StockRequestScreen>
   Future<void> _createNewRequest() async {
     final currentUser = widget.authService.currentUser;
     if (currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please log in to create a request')),
-      );
+      Toast.warning('Please log in to create a request');
       return;
     }
 
@@ -318,11 +317,7 @@ class _StockRequestScreenState extends State<StockRequestScreen>
 
     if (result == true) {
       _loadRequests();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Request created successfully')),
-        );
-      }
+      Toast.success('Request created successfully');
     }
   }
 
@@ -343,11 +338,7 @@ class _StockRequestScreenState extends State<StockRequestScreen>
 
     if (result == true) {
       _loadRequests();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Request updated successfully')),
-        );
-      }
+      Toast.success('Request updated successfully');
     }
   }
 
@@ -486,16 +477,10 @@ class _StockRequestScreenState extends State<StockRequestScreen>
       if (mounted) {
         Navigator.pop(context); // Close details dialog
         _loadRequests();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Request marked as received')),
-        );
+        Toast.success('Request marked as received');
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error updating status: $e')));
-      }
+      Toast.error('Error updating status: $e');
     }
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:nexxpharma/services/auth_service.dart';
+import 'package:nexxpharma/ui/widgets/toast.dart';
 
 class LoginScreen extends StatefulWidget {
   final AuthService authService;
@@ -31,10 +32,8 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text,
       );
 
-      if (!success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(widget.authService.error ?? 'Login failed')),
-        );
+      if (!success) {
+        Toast.error(widget.authService.error ?? 'Login failed');
       }
     }
   }

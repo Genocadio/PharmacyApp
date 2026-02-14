@@ -34,18 +34,23 @@ class ToastOverlay extends StatelessWidget {
                 return const SizedBox.shrink();
               }
 
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: notifications.map((notification) {
-                  return ToastNotificationWidget(
-                    key: ValueKey(notification.id),
-                    notification: notification,
-                    onDismiss: () {
-                      notificationService.dismiss(notification.id);
-                    },
-                  );
-                }).toList(),
+              // Limit to max 6 visible notifications to prevent overflow
+              final visibleNotifications = notifications.take(6).toList();
+
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: visibleNotifications.map((notification) {
+                    return ToastNotificationWidget(
+                      key: ValueKey(notification.id),
+                      notification: notification,
+                      onDismiss: () {
+                        notificationService.dismiss(notification.id);
+                      },
+                    );
+                  }).toList(),
+                ),
               );
             },
           ),

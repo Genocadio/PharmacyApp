@@ -9,8 +9,9 @@ This app includes a React Toastify-like floating notification system that displa
 - ⏱️ **Auto-dismiss**: Automatically disappears after a configurable duration (default: 4 seconds)
 - 👆 **Tap to dismiss**: Click on any notification to dismiss it immediately
 - 🌓 **Theme-aware**: Adapts to light and dark themes
-- 📚 **Stacking**: Multiple notifications stack vertically
+- 📚 **Stacking**: Multiple notifications stack vertically (max 6 visible, scrollable)
 - 🎯 **Easy to use**: Simple static methods for quick access
+- 📜 **Scrollable**: If many notifications appear, they become scrollable to prevent overflow
 
 ## Usage
 
@@ -164,6 +165,8 @@ The notification system consists of three main components:
    - Positions notifications on the screen (left side, below app bar)
    - Manages multiple notifications in a stack
    - Integrated into the MaterialApp builder
+   - Limits visible notifications to 6 max to prevent overflow
+   - Scrollable if more notifications than available space
 
 ## Theming
 
@@ -181,9 +184,10 @@ The notifications automatically adapt to your app's theme:
 
 1. **Be concise**: Keep messages short and actionable
 2. **Use appropriate types**: Match the notification type to the message context
-3. **Don't spam**: Avoid showing too many notifications at once
+3. **Don't spam**: Avoid showing too many notifications at once (max 6 will be displayed)
 4. **Provide context**: Include relevant details in error messages
 5. **Use success sparingly**: Only for important confirmations
+6. **Consider debouncing**: If an action might trigger multiple notifications, debounce them
 
 ## Migration Guide
 

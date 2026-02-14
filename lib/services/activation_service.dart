@@ -9,11 +9,13 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:nexxpharma/data/database.dart';
 import 'package:nexxpharma/services/dto/activation_dto.dart';
 import 'package:nexxpharma/services/settings_service.dart';
+import 'package:nexxpharma/services/notification_service.dart';
 import 'package:nexxpharma/data/tables.dart';
 
 class ActivationService extends ChangeNotifier {
   final AppDatabase _db;
   final SettingsService _settings;
+  final NotificationService _notificationService;
   final _storage = const FlutterSecureStorage();
 
   SettingsService get settingsService => _settings;
@@ -31,8 +33,9 @@ class ActivationService extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   bool? _isActivated;
+  DateTime? _lastExpirationWarning;
 
-  ActivationService(this._db, this._settings) {
+  ActivationService(this._db, this._settings, this._notificationService) {
     _init();
   }
 
@@ -597,17 +600,42 @@ class ActivationService extends ChangeNotifier {
     DeviceApiResponse<T> response, {
     String? privateKeyOverride,
   }) async {
+    // Track if we need to notify listeners (only for significant changes)
+    bool shouldNotify = false;
+    bool isFreshActivation = false;
+
+    // Check if this is a fresh device registration (new deviceId)
+    if (response.data is DeviceDTO) {
+      final device = response.data as DeviceDTO;
+      final existingDevice = await _db.getDevice();
+      
+      // If device exists but deviceId is different, this is a fresh activation
+      if (existingDevice != null && existingDevice.deviceId != device.deviceId) {
+        isFreshActivation = true;
+        debugPrint('🔄 Fresh device activation detected. Clearing all data...');
+        await _db.clearAllData();
+        _notificationService.showInfo('Starting fresh activation...');
+      }
+    }
+
+    // Process module information
     if (response.module != null) {
       await _db.saveModule(response.module!, privateKey: privateKeyOverride);
       await _applyModuleSubtype(response.module!.subType);
+      shouldNotify = true;
+      
+      // Check for expiration warning (15 days or less)
+      await _checkExpirationWarning(response.module!);
     } else if (privateKeyOverride != null) {
       await _db.updateModulePrivateKey(privateKeyOverride);
+      shouldNotify = true;
     }
 
+    // Process device data
     if (response.data is DeviceDTO) {
       final device = response.data as DeviceDTO;
-      // Always ensure we have a valid moduleId before saving device
       final moduleId = response.module?.id?.toString();
+      
       if (moduleId == null || moduleId.isEmpty) {
         debugPrint(
           'Warning: Device registration response missing module.id. Using fallback from database.',
@@ -619,16 +647,97 @@ class ActivationService extends ChangeNotifier {
         await _db.saveDevice(device, moduleId: moduleId);
       }
       await _settings.updateDeviceRole(_mapDeviceRole(device.deviceType));
-    } else if (response.status != null) {
-      await _db.updateDeviceLocal(
-        activationStatus: response.status!.isActive
-            ? ActivationStatus.ACTIVE
-            : ActivationStatus.INACTIVE,
-        supportMultiUsers: response.status!.supportMultiUsers,
-      );
+      shouldNotify = true;
     }
 
-    await _refreshActivationState();
+    // Process device status
+    if (response.status != null) {
+      final currentDevice = await _db.getDevice();
+      final currentStatus = currentDevice?.activationStatus;
+      final currentMultiUser = currentDevice?.supportMultiUsers;
+      
+      final newStatus = response.status!.isActive
+          ? ActivationStatus.ACTIVE
+          : ActivationStatus.INACTIVE;
+      final newMultiUser = response.status!.supportMultiUsers;
+      
+      // Update device status
+      await _db.updateDeviceLocal(
+        activationStatus: newStatus,
+        supportMultiUsers: newMultiUser,
+      );
+      
+      // Handle activation status change
+      if (currentStatus != newStatus) {
+        shouldNotify = true;
+        if (!response.status!.isActive) {
+          _notificationService.showError(
+            'Device has been deactivated. Please contact support.',
+          );
+          debugPrint('⚠️ Device deactivated by server');
+        } else {
+          _notificationService.showSuccess('Device is now active');
+          debugPrint('✅ Device activated by server');
+        }
+      }
+      
+      // Handle multi-user support change
+      if (currentMultiUser != null && currentMultiUser != newMultiUser) {
+        if (newMultiUser) {
+          _notificationService.showInfo(
+            'Multi-user support has been enabled',
+          );
+          debugPrint('👥 Multi-user support enabled');
+        } else {
+          _notificationService.showWarning(
+            'Multi-user support has been disabled',
+          );
+          debugPrint('👤 Multi-user support disabled');
+        }
+      }
+      
+      // Show sync requirement message if needed
+      if (response.status!.isSyncRequired) {
+        debugPrint('🔄 Sync required by server');
+      }
+    }
+
+    // Process commands (placeholder for future implementation)
+    if (response.commands.isNotEmpty) {
+      debugPrint('📋 Received ${response.commands.length} commands');
+      // TODO: Process commands when command handling is implemented
+    }
+
+    // Only refresh and notify if there was a significant change
+    if (shouldNotify || isFreshActivation) {
+      await _refreshActivationState();
+    }
+  }
+
+  /// Check if module expiration is close and show warning
+  Future<void> _checkExpirationWarning(ModuleResponse module) async {
+    if (module.expirationDate == null) return;
+    
+    final now = DateTime.now();
+    final daysUntilExpiration = module.expirationDate!.difference(now).inDays;
+    
+    // Only warn if within 15 days and haven't warned in the last 24 hours
+    if (daysUntilExpiration <= 15 && daysUntilExpiration > 0) {
+      final lastWarning = _lastExpirationWarning;
+      if (lastWarning == null || now.difference(lastWarning).inHours >= 24) {
+        _lastExpirationWarning = now;
+        
+        final message = daysUntilExpiration == 1
+            ? 'Your subscription expires tomorrow!'
+            : 'Your subscription expires in $daysUntilExpiration days';
+        
+        _notificationService.showWarning(message);
+        debugPrint('⚠️ Expiration warning: $daysUntilExpiration days remaining');
+      }
+    } else if (daysUntilExpiration <= 0) {
+      _notificationService.showError('Your subscription has expired!');
+      debugPrint('❌ Subscription expired');
+    }
   }
 
   DeviceRole _mapDeviceRole(String? deviceType) {

@@ -18,6 +18,7 @@ import 'package:nexxpharma/ui/screens/catalog_screen.dart';
 import 'package:nexxpharma/ui/screens/profile_screen.dart';
 import 'package:nexxpharma/ui/screens/settings_screen.dart';
 import 'package:nexxpharma/ui/screens/user_management_screen.dart';
+import 'package:nexxpharma/ui/widgets/toast.dart';
 import 'dart:ui';
 
 class StockInOutScreen extends StatefulWidget {
@@ -1631,8 +1632,10 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      UserManagementScreen(authService: widget.authService),
+                  builder: (context) => UserManagementScreen(
+                    authService: widget.authService,
+                    database: widget.database,
+                  ),
                 ),
               );
               break;
@@ -3631,11 +3634,7 @@ class _StockOutFlowState extends State<_StockOutFlow> {
     final stockItems = await widget.database.getStockInsByProduct(product.id);
 
     if (stockItems.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No stock available for this product')),
-        );
-      }
+      Toast.warning('No stock available for this product');
       return;
     }
 
@@ -3648,15 +3647,9 @@ class _StockOutFlowState extends State<_StockOutFlow> {
         .toList();
 
     if (availableStocks.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'All available stock batches for this product are either empty or already in the cart.',
-            ),
-          ),
-        );
-      }
+      Toast.warning(
+        'All available stock batches for this product are either empty or already in the cart.',
+      );
       return;
     }
 
@@ -4008,11 +4001,7 @@ class _StockOutFlowState extends State<_StockOutFlow> {
                   }
                 } else {
                   if (_cart.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Please add at least one product'),
-                      ),
-                    );
+                    Toast.warning('Please add at least one product');
                     return;
                   }
                   setState(() => _step++);
@@ -5264,15 +5253,10 @@ class _StockOutFlowState extends State<_StockOutFlow> {
 
                               if (remainingTotal < item.quantity) {
                                 // Cannot deselect - would leave insufficient stock
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Cannot deselect: Would leave insufficient stock (${remainingTotal} < ${item.quantity}). '
-                                      'Either select another stock first or reduce quantity.',
-                                    ),
-                                    duration: const Duration(seconds: 3),
-                                    backgroundColor: Colors.orange,
-                                  ),
+                                Toast.warning(
+                                  'Cannot deselect: Would leave insufficient stock ($remainingTotal < ${item.quantity}). '
+                                  'Either select another stock first or reduce quantity.',
+                                  duration: const Duration(seconds: 3),
                                 );
                                 return;
                               }

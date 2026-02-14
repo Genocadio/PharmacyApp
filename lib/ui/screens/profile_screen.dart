@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nexxpharma/services/auth_service.dart';
+import 'package:nexxpharma/ui/widgets/toast.dart';
 
 class ProfileScreen extends StatefulWidget {
   final AuthService authService;
@@ -48,14 +49,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
 
       if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully!')),
-        );
+        Toast.success('Profile updated successfully!');
         Navigator.pop(context);
-      } else if (!success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(widget.authService.error ?? 'Update failed')),
-        );
+      } else if (!success) {
+        Toast.error(widget.authService.error ?? 'Update failed');
       }
     }
   }

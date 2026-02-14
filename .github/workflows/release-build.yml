@@ -26,7 +26,7 @@ jobs:
       - name: Download Inner Build Artifact
         uses: actions/download-artifact@v4
         with:
-          name: inner-windows-x64
+          name: nexxpharma-windows-release
           path: build/windows-x64-for-installer
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id || github.run_id }}

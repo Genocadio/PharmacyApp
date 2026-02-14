@@ -4,6 +4,7 @@ import 'package:nexxpharma/data/tables.dart';
 import 'package:nexxpharma/services/activation_service.dart';
 import 'package:nexxpharma/services/settings_service.dart';
 import 'package:nexxpharma/services/sync_service.dart';
+import 'package:nexxpharma/ui/widgets/toast.dart';
 
 class SettingsScreen extends StatefulWidget {
   final SettingsService settingsService;
@@ -49,14 +50,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await widget.syncService.performSync();
     }
 
-    if (widget.syncService.status == SyncStatus.error && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Sync failed: ${widget.syncService.error}')),
-      );
-    } else if (widget.syncService.status == SyncStatus.success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sync completed successfully')),
-      );
+    if (widget.syncService.status == SyncStatus.error) {
+      Toast.error('Sync failed: ${widget.syncService.error}');
+    } else if (widget.syncService.status == SyncStatus.success) {
+      Toast.success('Sync completed successfully');
       // Reset to incremental after successful full sync
       if (_isForceFullSync) {
         setState(() {
@@ -72,22 +69,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!mounted) return;
 
     if (widget.syncService.status == SyncStatus.success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Synced ${widget.syncService.itemsSynced} items successfully',
-          ),
-          backgroundColor: Colors.green,
-        ),
+      Toast.success(
+        'Synced ${widget.syncService.itemsSynced} items successfully',
       );
     } else if (widget.syncService.status == SyncStatus.error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Sync failed: ${widget.syncService.error ?? "Unknown error"}',
-          ),
-          backgroundColor: Colors.red,
-        ),
+      Toast.error(
+        'Sync failed: ${widget.syncService.error ?? "Unknown error"}',
       );
     }
   }
@@ -98,9 +85,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!mounted) return;
 
     if (code == null || code.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to generate module code')),
-      );
+      Toast.error('Failed to generate module code');
       return;
     }
 
@@ -241,11 +226,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   widget.settingsService.updateBackendUrl(
                                     _backendUrlController.text,
                                   );
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Backend URL saved'),
-                                    ),
-                                  );
+                                  Toast.success('Backend URL saved');
                                 },
                               ),
                             ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nexxpharma/services/sync_service.dart';
+import 'package:nexxpharma/ui/widgets/toast.dart';
 
 /// Button and dialog for triggering device sync-out operations
 class SyncOutButton extends StatelessWidget {
@@ -184,20 +185,13 @@ class _SyncOutDialogState extends State<_SyncOutDialog> {
 
       if (success) {
         widget.onSuccess?.call();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Synced ${widget.syncService.itemsSynced} items successfully',
-              ),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-          // Auto close after delay
-          await Future.delayed(const Duration(seconds: 2));
-          if (mounted) Navigator.pop(context);
-        }
+        Toast.success(
+          'Synced ${widget.syncService.itemsSynced} items successfully',
+          duration: const Duration(seconds: 2),
+        );
+        // Auto close after delay
+        await Future.delayed(const Duration(seconds: 2));
+        if (mounted) Navigator.pop(context);
       } else {
         widget.onError?.call();
       }
