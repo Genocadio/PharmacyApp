@@ -39,10 +39,10 @@ jobs:
 
       - name: Zip Release
         run: |
-          mkdir release
-          cd build/windows/x64/runner/Release
-          powershell Compress-Archive -Path ./* -DestinationPath ../../../../release/nexxpharma-${{ env.VERSION }}.zip
-          cd ../../../../
+          $releaseDir = Join-Path $env:GITHUB_WORKSPACE "release"
+          New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
+          $zipPath = Join-Path $releaseDir "nexxpharma-$env:VERSION.zip"
+          Compress-Archive -Path "build/windows/x64/runner/Release/*" -DestinationPath $zipPath
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
