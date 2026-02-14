@@ -5,6 +5,7 @@ import 'package:nexxpharma/services/activation_service.dart';
 import 'package:nexxpharma/services/settings_service.dart';
 import 'package:nexxpharma/services/sync_service.dart';
 import 'package:nexxpharma/ui/widgets/toast.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class SettingsScreen extends StatefulWidget {
   final SettingsService settingsService;
@@ -667,18 +668,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildSettingsCard(
                 theme,
                 children: [
-                  ListTile(
-                    title: const Text('App Version'),
-                    leading: Icon(Icons.info_outline, color: accentColor),
-                    trailing: Text(
-                      '1.0.0',
-                      style: TextStyle(
-                        color: theme.textTheme.bodyMedium?.color?.withOpacity(
-                          0.5,
+                  FutureBuilder<PackageInfo>(
+                    future: PackageInfo.fromPlatform(),
+                    builder: (context, snapshot) {
+                      final version = snapshot.data?.version ?? 'Loading...';
+                      final buildNumber = snapshot.data?.buildNumber ?? '';
+                      final versionText = buildNumber.isNotEmpty 
+                          ? '$version+$buildNumber' 
+                          : version;
+                      
+                      return ListTile(
+                        title: const Text('App Version'),
+                        leading: Icon(Icons.info_outline, color: accentColor),
+                        trailing: Text(
+                          versionText,
+                          style: TextStyle(
+                            color: theme.textTheme.bodyMedium?.color?.withOpacity(
+                              0.5,
+                            ),
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ],
               ),

@@ -1,17 +1,20 @@
-#define AppVersion "1.0.0"
-#ifndef DefineAppVersion
-  #define AppVersion GetStringFileInfo(AddBackslash(SourcePath) + "Release\NexxPharma.exe", "ProductVersion")
+#ifndef APPVERSION
+  ; Try to read version from the built exe, fallback to 1.0.0
+  #define APPVERSION GetStringFileInfo(AddBackslash(SourcePath) + "Release\NexxPharma.exe", "ProductVersion")
+  #if APPVERSION == ""
+    #define APPVERSION "1.0.0"
+  #endif
 #endif
 
 [Setup]
 AppName=NexxPharma
-AppVersion={#AppVersion}
+AppVersion={#APPVERSION}
 AppPublisher=NexxServe
 AppCopyright=Copyright 2026 NexxServe
 DefaultDirName={autopf}\NexxPharma
 DefaultGroupName=NexxPharma
 OutputDir=output
-OutputBaseFilename=NexxPharmaSetup
+OutputBaseFilename=NexxPharmaSetup-{#APPVERSION}
 Compression=lzma
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64
