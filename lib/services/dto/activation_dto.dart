@@ -277,8 +277,8 @@ class DeviceStatusDTO {
 
   factory DeviceStatusDTO.fromJson(Map<String, dynamic> json) {
     return DeviceStatusDTO(
-      isActive: json['isActive'] ?? false,
-      isSyncRequired: json['isSyncRequired'] ?? false,
+      isActive: json['active'] ?? json['isActive'] ?? false,
+      isSyncRequired: json['syncRequired'] ?? json['isSyncRequired'] ?? false,
       supportMultiUsers: json['supportMultiUsers'] ?? false,
       message: json['message'],
     );
