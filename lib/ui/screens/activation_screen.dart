@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:nexxpharma/services/activation_service.dart';
 import 'package:nexxpharma/services/auth_service.dart';
 import 'package:nexxpharma/services/dto/user_dto.dart';
@@ -43,7 +44,9 @@ class _ActivationScreenState extends State<ActivationScreen> {
   @override
   void initState() {
     super.initState();
-    _urlController.text = widget.activationService.settingsService.backendUrl;
+    if (kDebugMode) {
+      _urlController.text = widget.activationService.settingsService.backendUrl;
+    }
     _checkStatus();
   }
 
@@ -218,21 +221,22 @@ class _ActivationScreenState extends State<ActivationScreen> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 40),
-                      TextFormField(
-                        controller: _urlController,
-                        decoration: InputDecoration(
-                          labelText: 'API Base URL',
-                          prefixIcon: const Icon(Icons.link_outlined),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                      if (kDebugMode)
+                        TextFormField(
+                          controller: _urlController,
+                          decoration: InputDecoration(
+                            labelText: 'API Base URL',
+                            prefixIcon: const Icon(Icons.link_outlined),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            hintText: 'http://localhost:8080',
                           ),
-                          hintText: 'http://localhost:8080',
+                          validator: (value) => (value == null || value.isEmpty)
+                              ? 'Required'
+                              : null,
                         ),
-                        validator: (value) => (value == null || value.isEmpty)
-                            ? 'Required'
-                            : null,
-                      ),
-                      const SizedBox(height: 20),
+                      if (kDebugMode) const SizedBox(height: 20),
                       TextFormField(
                         controller: _identifierController,
                         decoration: InputDecoration(

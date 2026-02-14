@@ -66,7 +66,7 @@ jobs:
       # Build Installer using .iss script
       - name: Build Installer
         run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/O" "installer\output" "/DAPPVERSION=${{ steps.version.outputs.version }}" "${{ github.workspace }}\installer\installer.iss"
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/Oinstaller\output" "/DAPPVERSION=${{ steps.version.outputs.version }}" "${{ github.workspace }}\installer\installer.iss"
 
       # Upload installer artifact
       - name: Upload Installer Artifact

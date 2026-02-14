@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:nexxpharma/data/tables.dart';
 import 'package:nexxpharma/services/activation_service.dart';
 import 'package:nexxpharma/services/settings_service.dart';
@@ -225,33 +226,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        TextField(
-                          controller: _backendUrlController,
-                          decoration: InputDecoration(
-                            labelText: 'Main Backend URL',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                        if (kDebugMode) ...[
+                          TextField(
+                            controller: _backendUrlController,
+                            decoration: InputDecoration(
+                              labelText: 'Main Backend URL',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              prefixIcon: const Icon(Icons.cloud_outlined),
+                              suffixIcon: IconButton(
+                                icon: const Icon(Icons.save_outlined),
+                                onPressed: () {
+                                  widget.settingsService.updateBackendUrl(
+                                    _backendUrlController.text,
+                                  );
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Backend URL saved'),
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
-                            prefixIcon: const Icon(Icons.cloud_outlined),
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.save_outlined),
-                              onPressed: () {
-                                widget.settingsService.updateBackendUrl(
-                                  _backendUrlController.text,
-                                );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Backend URL saved'),
-                                  ),
-                                );
-                              },
-                            ),
+                            onSubmitted: (value) {
+                              widget.settingsService.updateBackendUrl(value);
+                            },
                           ),
-                          onSubmitted: (value) {
-                            widget.settingsService.updateBackendUrl(value);
-                          },
-                        ),
-                        const SizedBox(height: 24),
+                          const SizedBox(height: 24),
+                        ],
                         Row(
                           children: [
                             Expanded(
@@ -620,60 +623,63 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 32),              _buildSectionHeader('Invoice Settings', theme),
-              const SizedBox(height: 8),
-              _buildSettingsCard(
-                theme,
-                children: [
-                  RadioListTile<InvoicePaperSize>(
-                    title: const Text('A4 (Standard)'),
-                    subtitle: const Text('Full-page invoice'),
-                    secondary: Icon(
-                      Icons.description_outlined,
-                      color: accentColor,
+              if (widget.settingsService.deviceType != DeviceType.CLINIC_INVENTORY) ...[
+                const SizedBox(height: 32),
+                _buildSectionHeader('Invoice Settings', theme),
+                const SizedBox(height: 8),
+                _buildSettingsCard(
+                  theme,
+                  children: [
+                    RadioListTile<InvoicePaperSize>(
+                      title: const Text('A4 (Standard)'),
+                      subtitle: const Text('Full-page invoice'),
+                      secondary: Icon(
+                        Icons.description_outlined,
+                        color: accentColor,
+                      ),
+                      value: InvoicePaperSize.a4,
+                      groupValue: widget.settingsService.invoicePaperSize,
+                      activeColor: accentColor,
+                      onChanged: (InvoicePaperSize? value) {
+                        if (value != null) {
+                          widget.settingsService.updateInvoicePaperSize(value);
+                        }
+                      },
                     ),
-                    value: InvoicePaperSize.a4,
-                    groupValue: widget.settingsService.invoicePaperSize,
-                    activeColor: accentColor,
-                    onChanged: (InvoicePaperSize? value) {
-                      if (value != null) {
-                        widget.settingsService.updateInvoicePaperSize(value);
-                      }
-                    },
-                  ),
-                  const Divider(height: 1),
-                  RadioListTile<InvoicePaperSize>(
-                    title: const Text('80mm (Receipt)'),
-                    subtitle: const Text('Thermal printer receipt'),
-                    secondary: Icon(
-                      Icons.receipt_long_outlined,
-                      color: accentColor,
+                    const Divider(height: 1),
+                    RadioListTile<InvoicePaperSize>(
+                      title: const Text('80mm (Receipt)'),
+                      subtitle: const Text('Thermal printer receipt'),
+                      secondary: Icon(
+                        Icons.receipt_long_outlined,
+                        color: accentColor,
+                      ),
+                      value: InvoicePaperSize.mm80,
+                      groupValue: widget.settingsService.invoicePaperSize,
+                      activeColor: accentColor,
+                      onChanged: (InvoicePaperSize? value) {
+                        if (value != null) {
+                          widget.settingsService.updateInvoicePaperSize(value);
+                        }
+                      },
                     ),
-                    value: InvoicePaperSize.mm80,
-                    groupValue: widget.settingsService.invoicePaperSize,
-                    activeColor: accentColor,
-                    onChanged: (InvoicePaperSize? value) {
-                      if (value != null) {
-                        widget.settingsService.updateInvoicePaperSize(value);
-                      }
-                    },
-                  ),
-                  const Divider(height: 1),
-                  RadioListTile<InvoicePaperSize>(
-                    title: const Text('57mm (Compact Receipt)'),
-                    subtitle: const Text('Compact thermal printer'),
-                    secondary: Icon(Icons.receipt_outlined, color: accentColor),
-                    value: InvoicePaperSize.mm57,
-                    groupValue: widget.settingsService.invoicePaperSize,
-                    activeColor: accentColor,
-                    onChanged: (InvoicePaperSize? value) {
-                      if (value != null) {
-                        widget.settingsService.updateInvoicePaperSize(value);
-                      }
-                    },
-                  ),
-                ],
-              ),
+                    const Divider(height: 1),
+                    RadioListTile<InvoicePaperSize>(
+                      title: const Text('57mm (Compact Receipt)'),
+                      subtitle: const Text('Compact thermal printer'),
+                      secondary: Icon(Icons.receipt_outlined, color: accentColor),
+                      value: InvoicePaperSize.mm57,
+                      groupValue: widget.settingsService.invoicePaperSize,
+                      activeColor: accentColor,
+                      onChanged: (InvoicePaperSize? value) {
+                        if (value != null) {
+                          widget.settingsService.updateInvoicePaperSize(value);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 32),
               _buildSectionHeader('About', theme),
               const SizedBox(height: 8),

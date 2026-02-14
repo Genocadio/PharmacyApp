@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nexxpharma/data/tables.dart';
 
@@ -7,6 +8,8 @@ enum InvoicePaperSize { a4, mm80, mm57 }
 class SettingsService extends ChangeNotifier {
   static const String _themeModeKey = 'theme_mode';
   static const String _backendUrlKey = 'backend_url';
+  static const String _productionApiUrl = 'https://api.nexxserve.tech/nexxmed';
+  static const String _devApiUrl = 'http://localhost:8080';
   static const String _lastSyncCursorKey = 'last_sync_cursor';
   static const String _lastSyncTimeKey = 'last_sync_time';
   static const String _invoicePaperSizeKey = 'invoice_paper_size';
@@ -39,7 +42,7 @@ class SettingsService extends ChangeNotifier {
 
   SettingsService(this._prefs)
     : _themeMode = _loadThemeMode(_prefs),
-      _backendUrl = _prefs.getString(_backendUrlKey) ?? 'http://localhost:8080',
+      _backendUrl = _loadBackendUrl(_prefs),
       _lastSyncCursor = _prefs.getInt(_lastSyncCursorKey) ?? 0,
       _lastSyncTime = _prefs.getString(_lastSyncTimeKey) != null
           ? DateTime.parse(_prefs.getString(_lastSyncTimeKey)!)
@@ -80,6 +83,16 @@ class SettingsService extends ChangeNotifier {
   DateTime? get lastDeviceStatusAt => _lastDeviceStatusAt;
   DateTime? get lastPublicKeyRotationAt => _lastPublicKeyRotationAt;
   DateTime? get lastDeviceDetailsAt => _lastDeviceDetailsAt;
+
+  static String _loadBackendUrl(SharedPreferences prefs) {
+    if (kDebugMode) {
+      // In debug mode, allow custom URLs from storage
+      return prefs.getString(_backendUrlKey) ?? _devApiUrl;
+    } else {
+      // In production, always use the production API URL
+      return _productionApiUrl;
+    }
+  }
 
   static ThemeMode _loadThemeMode(SharedPreferences prefs) {
     final mode = prefs.getString(_themeModeKey);
@@ -203,6 +216,8 @@ class SettingsService extends ChangeNotifier {
   }
 
   Future<void> updateBackendUrl(String url) async {
+    // Only allow updating backend URL in debug mode
+    if (!kDebugMode) return;
     if (url == _backendUrl) return;
     _backendUrl = url;
     notifyListeners();
