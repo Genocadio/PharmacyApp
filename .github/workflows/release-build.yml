@@ -1,0 +1,86 @@
+name: Release Build - Installer
+
+on:
+  workflow_run:
+    workflows: ["Inner Build - Windows x64"]
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version for release (e.g., v1.0.0)'
+        required: false
+
+jobs:
+  build-installer:
+    runs-on: windows-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Download Inner Build artifact
+      - name: Download Inner Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: inner-windows-x64
+          path: build/windows-x64-for-installer
+        continue-on-error: true
+
+      # Copy Inner Build into installer folder
+      - name: Prepare Installer Folder
+        run: |
+          if not exist "build\windows-x64-for-installer" (
+            echo Error: Inner build artifact not found
+            exit /b 1
+          )
+          if exist "installer\Release" rmdir /s /q "installer\Release"
+          mkdir "installer\Release"
+          xcopy /E /I /Y "build\windows-x64-for-installer\*" "installer\Release\"
+
+      # Install Inno Setup
+      - name: Install Inno Setup
+        run: choco install innosetup -y
+
+      # Extract version from pubspec.yaml if not provided
+      - name: Get Version
+        id: version
+        run: |
+          if "${{ github.event.inputs.version }}" != "" (
+            echo version=${{ github.event.inputs.version }} >> $env:GITHUB_OUTPUT
+          ) else (
+            $version = Select-String -Path "pubspec.yaml" -Pattern "version: ([0-9.]+)" | ForEach-Object { $_.Matches[0].Groups[1].Value }
+            echo version=$version >> $env:GITHUB_OUTPUT
+          )
+
+      # Create output directory
+      - name: Create Output Directory
+        run: |
+          if exist "installer\output" rmdir /s /q "installer\output"
+          mkdir "installer\output"
+
+      # Build Installer using .iss script
+      - name: Build Installer
+        run: |
+          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /O"installer\output" /DAPPVERSION="${{ steps.version.outputs.version }}" "${{ github.workspace }}\installer\installer.iss"
+
+      # Upload installer artifact
+      - name: Upload Installer Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexxpharma-installer
+          path: installer/output/*.exe
+          if-no-files-found: error
+
+      # Create GitHub Release (only on manual dispatch with version)
+      - name: Create GitHub Release
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.version != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          files: installer/output/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -43,7 +43,7 @@ val signaturePayload = if (data != null && data.isNotEmpty()) {
 val isValid = rsaVerifier.verify(signaturePayload, signature, publicKey)
 ```
 
-**📖 See [signature_standard.md](signature_standard.md) for complete documentation.**
+**📖 See [DEVICE_SIGNATURE_SPEC.md](DEVICE_SIGNATURE_SPEC.md) for complete specification and verification guide.**
 
 ---
 
