@@ -10,12 +10,14 @@ import 'package:nexxpharma/data/database.dart';
 import 'package:nexxpharma/services/dto/activation_dto.dart';
 import 'package:nexxpharma/services/settings_service.dart';
 import 'package:nexxpharma/services/notification_service.dart';
+import 'package:nexxpharma/services/auth_service.dart';
 import 'package:nexxpharma/data/tables.dart';
 
 class ActivationService extends ChangeNotifier {
   final AppDatabase _db;
   final SettingsService _settings;
   final NotificationService _notificationService;
+  AuthService? _authService;
   final _storage = const FlutterSecureStorage();
 
   SettingsService get settingsService => _settings;
@@ -35,8 +37,18 @@ class ActivationService extends ChangeNotifier {
   bool? _isActivated;
   DateTime? _lastExpirationWarning;
 
-  ActivationService(this._db, this._settings, this._notificationService) {
+  ActivationService(
+    this._db,
+    this._settings,
+    this._notificationService, {
+    AuthService? authService,
+  }) : _authService = authService {
     _init();
+  }
+
+  /// Set auth service (called after initialization to avoid circular dependencies)
+  void setAuthService(AuthService authService) {
+    _authService = authService;
   }
 
   Future<void> _init() async {
@@ -671,10 +683,12 @@ class ActivationService extends ChangeNotifier {
       if (currentStatus != newStatus) {
         shouldNotify = true;
         if (!response.status!.isActive) {
+          // Device has been deactivated - logout user and show error
+          _authService?.logout();
           _notificationService.showError(
             'Device has been deactivated. Please contact support.',
           );
-          debugPrint('⚠️ Device deactivated by server');
+          debugPrint('⚠️ Device deactivated by server - user logged out');
         } else {
           _notificationService.showSuccess('Device is now active');
           debugPrint('✅ Device activated by server');

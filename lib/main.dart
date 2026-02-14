@@ -42,7 +42,12 @@ void main() async {
   final stockInService = StockInService(database);
   final stockOutService = StockOutService(database);
   final notificationService = NotificationService();
-  final activationService = ActivationService(database, settingsService, notificationService);
+  final activationService = ActivationService(
+    database,
+    settingsService,
+    notificationService,
+    authService: authService,
+  );
   final connectivityService = ConnectivityService();
   
   // Initialize connectivity monitoring
