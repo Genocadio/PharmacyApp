@@ -11,7 +11,6 @@ import 'package:nexxpharma/services/stock_out_service.dart';
 import 'package:nexxpharma/services/notification_service.dart';
 import 'package:nexxpharma/services/connectivity_service.dart';
 import 'package:nexxpharma/services/background_sync_manager.dart';
-import 'package:nexxpharma/services/inactivity_service.dart';
 import 'package:nexxpharma/ui/screens/login_screen.dart';
 import 'package:nexxpharma/ui/screens/stock_in_out_screen.dart';
 import 'package:nexxpharma/ui/screens/activation_screen.dart';
@@ -78,9 +77,6 @@ void main() async {
     settingsService: settingsService,
   );
 
-  // Create inactivity service (20-minute timeout)
-  final inactivityService = InactivityService();
-
   runApp(
     MyApp(
       database: database,
@@ -93,7 +89,6 @@ void main() async {
       notificationService: notificationService,
       connectivityService: connectivityService,
       backgroundSyncManager: backgroundSyncManager,
-      inactivityService: inactivityService,
     ),
   );
 }
@@ -109,7 +104,6 @@ class MyApp extends StatelessWidget {
   final NotificationService notificationService;
   final ConnectivityService connectivityService;
   final BackgroundSyncManager backgroundSyncManager;
-  final InactivityService inactivityService;
 
   const MyApp({
     super.key,
@@ -123,7 +117,6 @@ class MyApp extends StatelessWidget {
     required this.notificationService,
     required this.connectivityService,
     required this.backgroundSyncManager,
-    required this.inactivityService,
   });
 
   @override
@@ -219,7 +212,6 @@ class MyApp extends StatelessWidget {
                                     syncService: syncService,
                                     activationService: activationService,
                                     backgroundSyncManager: backgroundSyncManager,
-                                    inactivityService: inactivityService,
                                   )
                                 : LoginScreen(authService: authService))
                           : ActivationScreen(
@@ -249,7 +241,6 @@ class _MainScreenWithSync extends StatefulWidget {
   final SyncService syncService;
   final ActivationService activationService;
   final BackgroundSyncManager backgroundSyncManager;
-  final InactivityService inactivityService;
 
   const _MainScreenWithSync({
     required this.database,
@@ -260,67 +251,63 @@ class _MainScreenWithSync extends StatefulWidget {
     required this.syncService,
     required this.activationService,
     required this.backgroundSyncManager,
-    required this.inactivityService,
   });
 
   @override
   State<_MainScreenWithSync> createState() => _MainScreenWithSyncState();
 }
 
-class _MainScreenWithSyncState extends State<_MainScreenWithSync>
-    with WidgetsBindingObserver {
+class _MainScreenWithSyncState extends State<_MainScreenWithSync> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    
     // Initialize background sync manager when reaching main screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.backgroundSyncManager.initialize();
     });
-
-    // Initialize inactivity timeout
-    widget.inactivityService.initialize(() {
-      // Logout on inactivity timeout
-      if (mounted) {
-        widget.authService.logout();
-      }
-    });
+    // Add lifecycle observer
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    widget.inactivityService.stop();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Only pause the inactivity check when app is paused
-    if (state == AppLifecycleState.paused) {
-      widget.inactivityService.stop();
-    } else if (state == AppLifecycleState.resumed) {
-      // Resume inactivity check when app comes back
-      widget.inactivityService.resume();
+    super.didChangeAppLifecycleState(state);
+    
+    switch (state) {
+      case AppLifecycleState.resumed:
+        // App came back to foreground - check if session is still valid
+        if (!widget.authService.checkSessionValidity()) {
+          // Session expired, user will be automatically logged out
+          // The UI will rebuild and show login screen
+          debugPrint('Session expired due to inactivity');
+        }
+        break;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        // App went to background or is closing - session time is preserved
+        // No action needed, user stays logged in
+        break;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Wrap the screen with GestureDetector to track user activity
-    return GestureDetector(
-      onTap: () => widget.inactivityService.recordActivity(),
-      onPanDown: (_) => widget.inactivityService.recordActivity(),
-      child: StockInOutScreen(
-        database: widget.database,
-        stockInService: widget.stockInService,
-        stockOutService: widget.stockOutService,
-        authService: widget.authService,
-        settingsService: widget.settingsService,
-        syncService: widget.syncService,
-        activationService: widget.activationService,
-      ),
+    return StockInOutScreen(
+      database: widget.database,
+      stockInService: widget.stockInService,
+      stockOutService: widget.stockOutService,
+      authService: widget.authService,
+      settingsService: widget.settingsService,
+      syncService: widget.syncService,
+      activationService: widget.activationService,
     );
   }
 }

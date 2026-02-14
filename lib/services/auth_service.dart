@@ -7,6 +7,8 @@ import 'package:nexxpharma/services/exceptions/service_exceptions.dart';
 class AuthService extends ChangeNotifier {
   final UserService _userService;
   UserDTO? _currentUser;
+  DateTime? _lastActivityTime;
+  static const _sessionTimeout = Duration(minutes: 20);
 
   UserService get userService => _userService;
   bool _isLoading = false;
@@ -28,6 +30,32 @@ class AuthService extends ChangeNotifier {
   bool? get hasUsers => _hasUsers;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  
+  /// Check if the session has expired (more than 20 minutes of inactivity)
+  bool get isSessionExpired {
+    if (_lastActivityTime == null || _currentUser == null) {
+      return false;
+    }
+    final timeSinceLastActivity = DateTime.now().difference(_lastActivityTime!);
+    return timeSinceLastActivity > _sessionTimeout;
+  }
+  
+  /// Update the last activity time to keep session alive
+  void updateActivity() {
+    if (_currentUser != null) {
+      _lastActivityTime = DateTime.now();
+    }
+  }
+  
+  /// Check session validity when app resumes
+  bool checkSessionValidity() {
+    if (isSessionExpired) {
+      logout();
+      return false;
+    }
+    updateActivity();
+    return true;
+  }
 
   /// Clear any existing error
   void clearError() {
@@ -44,6 +72,7 @@ class AuthService extends ChangeNotifier {
     try {
       final loginDTO = LoginDTO(identifier: identifier, password: password);
       _currentUser = await _userService.login(loginDTO);
+      _lastActivityTime = DateTime.now(); // Initialize session time
       _isLoading = false;
       notifyListeners();
       return true;
@@ -68,6 +97,7 @@ class AuthService extends ChangeNotifier {
 
     try {
       _currentUser = await _userService.register(createDTO);
+      _lastActivityTime = DateTime.now(); // Initialize session time
       _hasUsers = true;
       _isLoading = false;
       notifyListeners();
@@ -126,6 +156,7 @@ class AuthService extends ChangeNotifier {
   /// Log out the current user
   void logout() {
     _currentUser = null;
+    _lastActivityTime = null;
     _error = null;
     notifyListeners();
   }

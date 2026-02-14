@@ -264,61 +264,66 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
     }
   }
 
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final accentColor = theme.colorScheme.primary;
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        body: SafeArea(
-          child: Column(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: theme.brightness == Brightness.light
-                      ? Colors.grey.shade50
-                      : Colors.grey.shade900,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: theme.dividerColor.withOpacity(0.1),
+    return GestureDetector(
+      onTap: () => widget.authService.updateActivity(),
+      onPanUpdate: (_) => widget.authService.updateActivity(),
+      child: DefaultTabController(
+        length: 2,
+        child: Scaffold(
+          body: SafeArea(
+            child: Column(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: theme.brightness == Brightness.light
+                        ? Colors.grey.shade50
+                        : Colors.grey.shade900,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: theme.dividerColor.withOpacity(0.1),
+                      ),
                     ),
                   ),
-                ),
-                child: const TabBar(
-                  tabs: [
-                    Tab(
-                      text: 'Stock In',
-                      icon: Padding(
-                        padding: EdgeInsets.only(bottom: 4),
-                        child: Icon(Icons.inventory_2, size: 20),
+                  child: const TabBar(
+                    tabs: [
+                      Tab(
+                        text: 'Stock In',
+                        icon: Padding(
+                          padding: EdgeInsets.only(bottom: 4),
+                          child: Icon(Icons.inventory_2, size: 20),
+                        ),
                       ),
-                    ),
-                    Tab(
-                      text: 'Stock Out',
-                      icon: Padding(
-                        padding: EdgeInsets.only(bottom: 4),
-                        child: Icon(Icons.receipt_long, size: 20),
+                      Tab(
+                        text: 'Stock Out',
+                        icon: Padding(
+                          padding: EdgeInsets.only(bottom: 4),
+                          child: Icon(Icons.receipt_long, size: 20),
+                        ),
                       ),
-                    ),
-                  ],
-                  labelPadding: const EdgeInsets.symmetric(horizontal: 16),
+                    ],
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    _buildStockInTab(theme, accentColor),
-                    _buildStockOutTab(theme, accentColor),
-                  ],
+                const SizedBox(height: 8),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _buildStockInTab(theme, accentColor),
+                      _buildStockOutTab(theme, accentColor),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+          floatingActionButton: _buildMacDock(theme, accentColor),
         ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-        floatingActionButton: _buildMacDock(theme, accentColor),
       ),
     );
   }
