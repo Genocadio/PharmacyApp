@@ -578,26 +578,17 @@ class ActivationService extends ChangeNotifier {
     );
   }
 
-  String _buildSignaturePayload(
-    String moduleId,
-    String deviceId,
-    Map<String, dynamic> data,
-  ) {
-    return json.encode({
-      'moduleId': moduleId,
-      'deviceId': deviceId,
-      'data': data,
-    });
-  }
-
+  /// Build standardized signature payload
+  /// Format: deviceId|dataJson if data exists and not empty, otherwise just deviceId
   String _buildDeviceSignaturePayload(
     String deviceId,
     Map<String, dynamic> data,
   ) {
-    return json.encode({
-      'deviceId': deviceId,
-      'data': data,
-    });
+    if (data.isEmpty) {
+      return deviceId;
+    }
+    final dataJson = json.encode(data);
+    return '$deviceId|$dataJson';
   }
 
   Future<void> _handleDeviceApiResponse<T>(

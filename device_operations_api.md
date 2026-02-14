@@ -2,6 +2,51 @@
 
 This document details how the device sends operational data to the server, including worker sync, stock updates, and sales snapshots.
 
+## Signature Standard
+
+**All device requests use a standardized signature format for authentication.**
+
+### Signature Payload Format
+
+**With Data:**
+```
+signaturePayload = deviceId|dataJson
+```
+Where `dataJson` is the JSON-encoded string of the data object.
+
+**Without Data (or empty data):**
+```
+signaturePayload = deviceId
+```
+
+### Example Signature Generation
+
+```dart
+// With data
+signaturePayload = "abc-123|{\"workers\":[{\"name\":\"John\"}]}"
+
+// Without data (e.g., recycle module)
+signaturePayload = "abc-123"
+
+// Sign with RSA-2048 + SHA-256
+signature = privateKey.createSignature(signaturePayload)
+```
+
+### Backend Verification
+
+```kotlin
+val signaturePayload = if (data != null && data.isNotEmpty()) {
+    "$deviceId|${objectMapper.writeValueAsString(data)}"
+} else {
+    deviceId
+}
+val isValid = rsaVerifier.verify(signaturePayload, signature, publicKey)
+```
+
+**📖 See [signature_standard.md](signature_standard.md) for complete documentation.**
+
+---
+
 ## 1. Sync Workers
 Synchronizes worker (user) data from the device to the server.
 

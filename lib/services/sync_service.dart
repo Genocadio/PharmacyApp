@@ -495,6 +495,16 @@ class SyncService extends ChangeNotifier {
     }
   }
 
+  /// Build standardized signature payload
+  /// Format: deviceId|dataJson if data exists, otherwise just deviceId
+  String _buildSignaturePayload(String deviceId, [dynamic data]) {
+    if (data == null) {
+      return deviceId;
+    }
+    final dataJson = json.encode(data);
+    return '$deviceId|$dataJson';
+  }
+
   Future<List<Map<String, dynamic>>> _getUnsyncedWorkers(bool fullSync) async {
     final query = _db.select(_db.users);
     if (!fullSync) {
@@ -597,18 +607,21 @@ class SyncService extends ChangeNotifier {
 
       final privateKey = RSAPrivateKey.fromPEM(module!.privateKey!);
       final publicKey = privateKey.publicKey;
-      final signature = privateKey.createSignature(deviceId);
+      
+      final dataPayload = {'workers': workers};
+      final signaturePayload = _buildSignaturePayload(deviceId, dataPayload);
+      final signature = privateKey.createSignature(signaturePayload);
 
       final request = {
         'deviceId': deviceId,
         'signature': signature,
-        'data': {'workers': workers},
+        'data': dataPayload,
       };
 
       debugPrint('=== Sync Workers Request ===');
       debugPrint('DeviceId: $deviceId');
       debugPrint('Workers count: ${workers.length}');
-      debugPrint('Signature Payload: $deviceId');
+      debugPrint('Signature Payload: $signaturePayload');
       debugPrint('PrivateKey (first 100 chars): ${module.privateKey!.substring(0, 100)}...');
       debugPrint('PublicKey: ${publicKey.toString()}');
       debugPrint('Signature: $signature');
@@ -655,7 +668,10 @@ class SyncService extends ChangeNotifier {
 
       final privateKey = RSAPrivateKey.fromPEM(module!.privateKey!);
       final publicKey = privateKey.publicKey;
-      final signature = privateKey.createSignature(deviceId);
+      
+      final dataPayload = {'stocksIn': stocksIn, 'stocksOut': stocksOut};
+      final signaturePayload = _buildSignaturePayload(deviceId, dataPayload);
+      final signature = privateKey.createSignature(signaturePayload);
 
       final request = {
         'deviceId': deviceId,
@@ -668,7 +684,7 @@ class SyncService extends ChangeNotifier {
       debugPrint('DeviceId: $deviceId');
       debugPrint('StocksIn count: ${stocksIn.length}');
       debugPrint('StocksOut count: ${stocksOut.length}');
-      debugPrint('Signature Payload: $deviceId');
+      debugPrint('Signature Payload: $signaturePayload');
       debugPrint('PrivateKey (first 100 chars): ${module.privateKey!.substring(0, 100)}...');
       debugPrint('PublicKey: ${publicKey.toString()}');
       debugPrint('Signature: $signature');
@@ -714,21 +730,24 @@ class SyncService extends ChangeNotifier {
 
       final privateKey = RSAPrivateKey.fromPEM(module!.privateKey!);
       final publicKey = privateKey.publicKey;
-      final signature = privateKey.createSignature(deviceId);
+      
+      final dataPayload = {
+        'sales': sales,
+        'period': 'MANUAL',
+      };
+      final signaturePayload = _buildSignaturePayload(deviceId, dataPayload);
+      final signature = privateKey.createSignature(signaturePayload);
 
       final request = {
         'deviceId': deviceId,
         'signature': signature,
-        'data': {
-          'sales': sales,
-          'period': 'MANUAL',
-        },
+        'data': dataPayload,
       };
 
       debugPrint('=== Sync Sales Request ===');
       debugPrint('DeviceId: $deviceId');
       debugPrint('Sales count: ${sales.length}');
-      debugPrint('Signature Payload: $deviceId');
+      debugPrint('Signature Payload: $signaturePayload');
       debugPrint('PrivateKey (first 100 chars): ${module.privateKey!.substring(0, 100)}...');
       debugPrint('PublicKey: ${publicKey.toString()}');
       debugPrint('Signature: $signature');
