@@ -497,10 +497,23 @@ class SyncService extends ChangeNotifier {
 
   /// Build standardized signature payload
   /// Format: deviceId|dataJson if data exists, otherwise just deviceId
+  /// Build standardized signature payload
+  /// Format: deviceId|dataJson if data exists and is not empty
+  /// Empty arrays, objects, or null => just deviceId
   String _buildSignaturePayload(String deviceId, [dynamic data]) {
+    // Treat null, empty lists, and empty maps as no data
     if (data == null) {
       return deviceId;
     }
+    
+    if (data is List && data.isEmpty) {
+      return deviceId;
+    }
+    
+    if (data is Map && data.isEmpty) {
+      return deviceId;
+    }
+    
     final dataJson = json.encode(data);
     return '$deviceId|$dataJson';
   }

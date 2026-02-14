@@ -28,7 +28,8 @@ jobs:
         with:
           name: inner-windows-x64
           path: build/windows-x64-for-installer
-        continue-on-error: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id || github.run_id }}
 
       # Copy Inner Build into installer folder
       - name: Prepare Installer Folder

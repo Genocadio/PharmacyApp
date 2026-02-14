@@ -579,11 +579,13 @@ class ActivationService extends ChangeNotifier {
   }
 
   /// Build standardized signature payload
-  /// Format: deviceId|dataJson if data exists and not empty, otherwise just deviceId
+  /// Format: deviceId|dataJson if data exists and is not empty
+  /// Empty lists, objects, or null => just deviceId
   String _buildDeviceSignaturePayload(
     String deviceId,
     Map<String, dynamic> data,
   ) {
+    // Treat null or empty maps as no data
     if (data.isEmpty) {
       return deviceId;
     }
