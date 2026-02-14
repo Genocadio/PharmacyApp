@@ -12,7 +12,7 @@ param(
     [int]$ProcessId,
     
     [Parameter(Mandatory=$false)]
-    [string]$AppExeName = "nexxpharma.exe"
+    [string]$AppExeName = "NexxPharma.exe"
 )
 
 $ErrorActionPreference = "Stop"

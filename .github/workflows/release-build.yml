@@ -42,8 +42,7 @@ jobs:
             exit 1
           }
           if (Test-Path "installer\Release") { Remove-Item "installer\Release" -Recurse -Force }
-          New-Item -ItemType Directory -Path "installer\Release\bin" -Force | Out-Null
-          New-Item -ItemType Directory -Path "installer\Release\lib" -Force | Out-Null
+          New-Item -ItemType Directory -Path "installer\Release" -Force | Out-Null
           
           # Extract zip file from inner build
           $sourceZip = Get-ChildItem "build\windows-x64-for-installer\*.zip" -ErrorAction SilentlyContinue
@@ -56,14 +55,8 @@ jobs:
           Expand-Archive -Path $sourceZip.FullName -DestinationPath "installer\Release\temp" -Force
           $sourceDir = "installer\Release\temp"
           
-          # Copy executable to bin
-          Get-ChildItem -Path $sourceDir -Filter "*.exe" -Recurse | Copy-Item -Destination "installer\Release\bin\" -Force
-          
-          # Copy DLLs to lib
-          Get-ChildItem -Path $sourceDir -Filter "*.dll" -Recurse | Copy-Item -Destination "installer\Release\lib\" -Force
-          
-          # Copy other files (if any non-standard content) to lib, EXCLUDING zip files
-          Get-ChildItem -Path $sourceDir -Exclude "*.exe","*.dll","*.zip" -Recurse | Where-Object { $_.PSIsContainer -eq $false } | Copy-Item -Destination "installer\Release\lib\" -Force
+          # Copy all extracted files into Release
+          Copy-Item -Path (Join-Path $sourceDir '*') -Destination "installer\Release" -Recurse -Force
           
           # Cleanup temp folder
           Remove-Item "installer\Release\temp" -Recurse -Force -ErrorAction SilentlyContinue

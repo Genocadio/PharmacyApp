@@ -40,7 +40,9 @@ jobs:
       - name: Zip Release
         run: |
           mkdir release
-          powershell Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath release/nexxpharma-${{ env.VERSION }}.zip
+          cd build/windows/x64/runner/Release
+          powershell Compress-Archive -Path ./* -DestinationPath ../../../../release/nexxpharma-${{ env.VERSION }}.zip
+          cd ../../../../
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4

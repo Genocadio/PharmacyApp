@@ -24,10 +24,8 @@ WizardStyle=modern
 ShowLanguageDialog=no
 
 [Files]
-; Copy executable to app directory
-Source: "Release\bin\NexxPharma.exe"; DestDir: "{app}"; Flags: ignoreversion
-; Copy DLLs to lib subdirectory
-Source: "Release\lib\*"; DestDir: "{app}\lib"; Flags: recursesubdirs ignoreversion
+; Copy all packaged files into the app directory
+Source: "Release\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 ; Copy app icon
 Source: "..\windows\runner\resources\app_icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 ; Copy updater script to root
