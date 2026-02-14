@@ -12,8 +12,9 @@ on:
       version:
         description: 'Version for release (e.g., v1.0.0)'
         required: false
+
 permissions:
-  contents: write 
+  contents: write  # Needed for creating releases
 
 jobs:
   build-installer:
@@ -33,7 +34,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id || github.run_id }}
 
-      # Copy Inner Build into installer folder
+      # Prepare Installer Folder
       - name: Prepare Installer Folder
         run: |
           if (-not (Test-Path "build\windows-x64-for-installer")) {
@@ -48,7 +49,7 @@ jobs:
       - name: Install Inno Setup
         run: choco install innosetup -y
 
-      # Extract version from pubspec.yaml if not provided
+      # Get Version
       - name: Get Version
         id: version
         run: |
@@ -57,7 +58,6 @@ jobs:
           } else {
             $version = Select-String -Path "pubspec.yaml" -Pattern "version: ([0-9.]+)" | ForEach-Object { $_.Matches[0].Groups[1].Value }
             echo "version=$version" >> $env:GITHUB_OUTPUT
-          }
 
       # Create output directory
       - name: Create Output Directory
@@ -70,7 +70,7 @@ jobs:
         run: |
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/Oinstaller\output" "/DAPPVERSION=${{ steps.version.outputs.version }}" "${{ github.workspace }}\installer\installer.iss"
 
-      # Upload installer artifact
+      # Upload installer artifact temporarily (optional)
       - name: Upload Installer Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -78,12 +78,12 @@ jobs:
           path: installer/output/*.exe
           if-no-files-found: error
 
-      # Create GitHub Release (only on manual dispatch with version)
-      - name: Create GitHub Release
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.version != ''
+      # Create GitHub Release (permanent URL)
+      - name: Publish Installer to Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.version }}
+          tag_name: v${{ steps.version.outputs.version }}
+          name: nexxpharma v${{ steps.version.outputs.version }}
           files: installer/output/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
