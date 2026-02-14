@@ -28,6 +28,8 @@ ShowLanguageDialog=no
 Source: "Release\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 ; Copy app icon
 Source: "..\windows\runner\resources\app_icon.ico"; DestDir: "{app}"; Flags: ignoreversion
+; Copy updater script
+Source: "..\updater\update.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\NexxPharma"; Filename: "{app}\NexxPharma.exe"; IconFileName: "{app}\app_icon.ico"; IconIndex: 0

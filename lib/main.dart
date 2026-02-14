@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:io' show Platform;
 import 'package:nexxpharma/data/database.dart';
 import 'package:nexxpharma/services/auth_service.dart';
+import 'package:nexxpharma/services/auto_update_service.dart';
 import 'package:nexxpharma/services/settings_service.dart';
 import 'package:nexxpharma/services/user_service.dart';
 import 'package:nexxpharma/services/sync_service.dart';
@@ -45,6 +47,22 @@ void main() async {
   
   // Initialize connectivity monitoring
   connectivityService.initialize();
+
+  // Configure auto-update service (Windows only)
+  if (Platform.isWindows) {
+    AutoUpdateService().configure(
+      owner: 'YOUR_GITHUB_ORG',  // TODO: Replace with your GitHub organization/username
+      repo: 'nexxpharma',
+    );
+    
+    // Initialize automatic update checks
+    // Checks every 6 hours and performs initial check 10 seconds after startup
+    AutoUpdateService().initialize(
+      autoCheck: true,
+      checkInterval: const Duration(hours: 6),
+      checkImmediately: true,
+    );
+  }
 
   // Create background sync manager
   final backgroundSyncManager = BackgroundSyncManager(

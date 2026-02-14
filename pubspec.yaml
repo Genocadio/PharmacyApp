@@ -43,6 +43,7 @@ dependencies:
   shared_preferences: ^2.3.5
   http: ^1.2.1
   intl: ^0.20.2
+  path: ^1.9.0
   pdf: ^3.10.4
   printing: ^5.11.0
   geolocator: ^14.0.2

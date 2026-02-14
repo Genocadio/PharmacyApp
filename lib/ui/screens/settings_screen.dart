@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:io' show Platform;
 import 'package:nexxpharma/data/tables.dart';
 import 'package:nexxpharma/services/activation_service.dart';
+import 'package:nexxpharma/services/auto_update_service.dart';
 import 'package:nexxpharma/services/settings_service.dart';
 import 'package:nexxpharma/services/sync_service.dart';
 import 'package:nexxpharma/ui/widgets/toast.dart';
@@ -692,6 +694,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       );
                     },
                   ),
+                  if (Platform.isWindows) ..._buildUpdateSection(theme, accentColor),
                 ],
               ),
             ],
@@ -728,5 +731,260 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       child: Column(children: children),
     );
+  }
+
+  List<Widget> _buildUpdateSection(ThemeData theme, Color accentColor) {
+    return [
+      const Divider(height: 1),
+      // Automatic update checks toggle
+      ListenableBuilder(
+        listenable: AutoUpdateService(),
+        builder: (context, _) {
+          final updateService = AutoUpdateService();
+          final lastCheck = updateService.lastCheckTime;
+          final lastCheckStr = lastCheck != null
+              ? 'Last checked: ${_formatLastCheckTime(lastCheck)}'
+              : 'Never checked';
+
+          return SwitchListTile(
+            title: const Text('Automatic Update Checks'),
+            subtitle: Text(lastCheckStr),
+            secondary: Icon(Icons.autorenew, color: accentColor),
+            value: updateService.autoCheckEnabled,
+            activeColor: accentColor,
+            onChanged: (value) {
+              updateService.setAutoCheckEnabled(value);
+              if (value) {
+                Toast.success('Automatic update checks enabled');
+              } else {
+                Toast.info('Automatic update checks disabled');
+              }
+            },
+          );
+        },
+      ),
+      // Check interval selector
+      ListenableBuilder(
+        listenable: AutoUpdateService(),
+        builder: (context, _) {
+          final updateService = AutoUpdateService();
+          if (!updateService.autoCheckEnabled) {
+            return const SizedBox.shrink();
+          }
+
+          final interval = updateService.checkInterval;
+          final hours = interval.inHours;
+
+          return ListTile(
+            title: const Text('Check Interval'),
+            subtitle: Text('Check every $hours hours'),
+            leading: Icon(Icons.schedule, color: accentColor),
+            trailing: PopupMenuButton<int>(
+              onSelected: (hours) {
+                updateService.setCheckInterval(Duration(hours: hours));
+                Toast.success('Check interval updated to $hours hours');
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(value: 1, child: Text('Every 1 hour')),
+                const PopupMenuItem(value: 3, child: Text('Every 3 hours')),
+                const PopupMenuItem(value: 6, child: Text('Every 6 hours')),
+                const PopupMenuItem(value: 12, child: Text('Every 12 hours')),
+                const PopupMenuItem(value: 24, child: Text('Every 24 hours')),
+              ],
+              child: Chip(
+                label: Text('$hours hours'),
+                avatar: const Icon(Icons.arrow_drop_down, size: 18),
+              ),
+            ),
+          );
+        },
+      ),
+      const Divider(height: 1),
+      // Manual check button and status
+      ListenableBuilder(
+        listenable: AutoUpdateService(),
+        builder: (context, _) {
+          final updateService = AutoUpdateService();
+          final status = updateService.status;
+          final isUpdateAvailable = updateService.isUpdateAvailable;
+
+          return ListTile(
+            title: Text(
+              isUpdateAvailable ? 'Update Available' : 'Check for Updates',
+            ),
+            subtitle: _buildUpdateSubtitle(status, updateService),
+            leading: Icon(
+              _getUpdateIcon(status),
+              color: isUpdateAvailable ? Colors.orange : accentColor,
+            ),
+            trailing: _buildUpdateTrailing(status, updateService, accentColor),
+            onTap: () => _handleUpdateTap(status, updateService),
+          );
+        },
+      ),
+    ];
+  }
+
+  String _formatLastCheckTime(DateTime lastCheck) {
+    final now = DateTime.now();
+    final difference = now.difference(lastCheck);
+
+    if (difference.inMinutes < 1) {
+      return 'just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else {
+      return '${difference.inDays}d ago';
+    }
+  }
+
+  Widget? _buildUpdateSubtitle(UpdateStatus status, AutoUpdateService service) {
+    switch (status) {
+      case UpdateStatus.checking:
+        return const Text('Checking for updates...');
+      case UpdateStatus.available:
+        return Text(
+          'Version ${service.latestRelease?.version} is available',
+          style: const TextStyle(color: Colors.orange),
+        );
+      case UpdateStatus.downloading:
+        return LinearProgressIndicator(
+          value: service.downloadProgress,
+          backgroundColor: Colors.grey.shade300,
+        );
+      case UpdateStatus.readyToInstall:
+        return const Text('Update ready to install');
+      case UpdateStatus.installing:
+        return const Text('Installing update...');
+      case UpdateStatus.upToDate:
+        return const Text('You are on the latest version');
+      case UpdateStatus.error:
+        return Text(
+          service.errorMessage ?? 'Update check failed',
+          style: const TextStyle(color: Colors.red),
+        );
+      case UpdateStatus.noConnection:
+        return const Text('No internet connection');
+    }
+  }
+
+  IconData _getUpdateIcon(UpdateStatus status) {
+    switch (status) {
+      case UpdateStatus.checking:
+        return Icons.refresh;
+      case UpdateStatus.available:
+        return Icons.system_update;
+      case UpdateStatus.downloading:
+        return Icons.download;
+      case UpdateStatus.readyToInstall:
+        return Icons.check_circle;
+      case UpdateStatus.installing:
+        return Icons.hourglass_empty;
+      case UpdateStatus.upToDate:
+        return Icons.check_circle_outline;
+      case UpdateStatus.error:
+        return Icons.error_outline;
+      case UpdateStatus.noConnection:
+        return Icons.cloud_off;
+    }
+  }
+
+  Widget? _buildUpdateTrailing(
+    UpdateStatus status,
+    AutoUpdateService service,
+    Color accentColor,
+  ) {
+    switch (status) {
+      case UpdateStatus.checking:
+        return const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        );
+      case UpdateStatus.available:
+        return TextButton(
+          onPressed: () => _downloadUpdate(service),
+          child: const Text('Download'),
+        );
+      case UpdateStatus.downloading:
+        return Text(
+          '${(service.downloadProgress * 100).toInt()}%',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: accentColor,
+          ),
+        );
+      case UpdateStatus.readyToInstall:
+        return TextButton(
+          onPressed: () => _installUpdate(service),
+          child: const Text('Install'),
+        );
+      case UpdateStatus.installing:
+        return const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        );
+      default:
+        return null;
+    }
+  }
+
+  void _handleUpdateTap(UpdateStatus status, AutoUpdateService service) {
+    if (status == UpdateStatus.upToDate ||
+        status == UpdateStatus.error ||
+        status == UpdateStatus.noConnection) {
+      // Check for updates
+      service.checkForUpdates();
+    } else if (status == UpdateStatus.available) {
+      // Download update
+      _downloadUpdate(service);
+    } else if (status == UpdateStatus.readyToInstall) {
+      // Install update
+      _installUpdate(service);
+    }
+  }
+
+  Future<void> _downloadUpdate(AutoUpdateService service) async {
+    final success = await service.downloadUpdate();
+    if (mounted) {
+      if (success) {
+        Toast.success('Update downloaded successfully');
+      } else {
+        Toast.error('Failed to download update');
+      }
+    }
+  }
+
+  Future<void> _installUpdate(AutoUpdateService service) async {
+    if (!mounted) return;
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Install Update'),
+        content: const Text(
+          'The application will close and restart to install the update. '
+          'Make sure all your work is saved.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Install'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      service.installUpdate();
+    }
   }
 }

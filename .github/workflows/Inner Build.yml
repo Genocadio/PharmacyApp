@@ -52,6 +52,7 @@ jobs:
         with:
           tag: v${{ env.VERSION }}
           name: nexxpharma v${{ env.VERSION }}
-          files: release/nexxpharma-${{ env.VERSION }}.zip
+          artifacts: release/nexxpharma-${{ env.VERSION }}.zip
           draft: false
           prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
