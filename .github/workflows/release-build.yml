@@ -58,6 +58,7 @@ jobs:
           } else {
             $version = Select-String -Path "pubspec.yaml" -Pattern "version: ([0-9.]+)" | ForEach-Object { $_.Matches[0].Groups[1].Value }
             echo "version=$version" >> $env:GITHUB_OUTPUT
+          }
 
       # Create output directory
       - name: Create Output Directory

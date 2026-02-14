@@ -1599,7 +1599,7 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
             ),
           ),
         ],
-        onSelected: (String value) {
+        onSelected: (String value) async {
           switch (value) {
             case 'catalog':
               Navigator.push(
@@ -1654,7 +1654,7 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
               );
               break;
             case 'logout':
-              widget.authService.logout();
+              await widget.authService.logout();
               break;
           }
         },
@@ -3522,6 +3522,7 @@ class _StockOutFlowState extends State<_StockOutFlow> {
   final _destinationPharmacyNameController = TextEditingController();
   final _destinationPharmacyPhoneController = TextEditingController();
   final _tinNumberController = TextEditingController();
+  bool _isRetailSale = false; // Toggle for wholesale to sell retail
 
   // Clinic Fields
   ClinicService? _selectedClinicService;
@@ -3573,8 +3574,11 @@ class _StockOutFlowState extends State<_StockOutFlow> {
   void _calculateTotalsForItem(_StockOutItemForm item) {
     item.itemTotal = item.price * item.quantity;
 
-    // Only apply insurance pricing for PHARMACY_RETAIL
-    if (_deviceType == DeviceType.PHARMACY_RETAIL &&
+    // Apply insurance pricing for PHARMACY_RETAIL or wholesale retail sales
+    final isRetailMode = _deviceType == DeviceType.PHARMACY_RETAIL ||
+        (_deviceType == DeviceType.PHARMACY_WHOLESALE && _isRetailSale);
+    
+    if (isRetailMode &&
         item.insuranceId != null &&
         item.insurance != null) {
       final clientPercentage = item.insurance!.clientPercentage / 100.0;
@@ -3592,8 +3596,11 @@ class _StockOutFlowState extends State<_StockOutFlow> {
     Insurance? itemInsurance = _selectedInsurance;
     String? itemInsuranceId = _stockOutInsuranceId;
 
-    // 2. For PHARMACY_RETAIL: Check for insurance coverage if selected
-    if (_deviceType == DeviceType.PHARMACY_RETAIL && itemInsurance != null) {
+    // 2. For PHARMACY_RETAIL or wholesale retail sales: Check for insurance coverage if selected
+    final isRetailMode = _deviceType == DeviceType.PHARMACY_RETAIL ||
+        (_deviceType == DeviceType.PHARMACY_WHOLESALE && _isRetailSale);
+    
+    if (isRetailMode && itemInsurance != null) {
       final insurances = await widget.database.getInsurancesForProduct(
         item.product.id,
       );
@@ -4252,12 +4259,85 @@ class _StockOutFlowState extends State<_StockOutFlow> {
   }
 
   Widget _buildStep1Wholesale() {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Destination Pharmacy Details'),
-        const SizedBox(height: 20),
-        TextFormField(
+        // Retail Sale Toggle
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _isRetailSale
+                  ? theme.colorScheme.primary.withOpacity(0.5)
+                  : theme.dividerColor.withOpacity(0.2),
+              width: _isRetailSale ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Checkbox(
+                value: _isRetailSale,
+                onChanged: (value) {
+                  setState(() {
+                    _isRetailSale = value ?? false;
+                    // Clear wholesale fields when switching to retail
+                    if (_isRetailSale) {
+                      _destinationPharmacyNameController.clear();
+                      _destinationPharmacyPhoneController.clear();
+                      _tinNumberController.clear();
+                    } else {
+                      // Clear retail fields when switching to wholesale
+                      _patientNameController.clear();
+                      _cardController.clear();
+                      _companyController.clear();
+                      _prescriberNameController.clear();
+                      _prescriberLicenseController.clear();
+                      _organizationController.clear();
+                      _stockOutInsuranceId = null;
+                      _selectedInsurance = null;
+                    }
+                  });
+                },
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Retail Sale',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: _isRetailSale
+                            ? theme.colorScheme.primary
+                            : theme.textTheme.bodyLarge?.color,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Enable to sell to individual customers with insurance support',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        
+        // Show retail fields or wholesale fields based on toggle
+        if (_isRetailSale)
+          _buildStep1Retail()
+        else ...[
+          _buildSectionTitle('Destination Pharmacy Details'),
+          const SizedBox(height: 20),
+          TextFormField(
           controller: _destinationPharmacyNameController,
           decoration: InputDecoration(
             labelText: 'Pharmacy Name *',
@@ -4289,6 +4369,7 @@ class _StockOutFlowState extends State<_StockOutFlow> {
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
+        ],
       ],
     );
   }

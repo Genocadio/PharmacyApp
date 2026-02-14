@@ -684,7 +684,7 @@ class ActivationService extends ChangeNotifier {
         shouldNotify = true;
         if (!response.status!.isActive) {
           // Device has been deactivated - logout user and show error
-          _authService?.logout();
+          await _authService?.logout();
           _notificationService.showError(
             'Device has been deactivated. Please contact support.',
           );

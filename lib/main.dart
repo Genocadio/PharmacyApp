@@ -36,7 +36,7 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
 
   final userService = UserService(database);
-  final authService = AuthService(userService);
+  final authService = AuthService(userService, prefs);
   final settingsService = SettingsService(prefs);
   final syncService = SyncService(database, settingsService);
   final stockInService = StockInService(database);
@@ -282,11 +282,13 @@ class _MainScreenWithSyncState extends State<_MainScreenWithSync> with WidgetsBi
     switch (state) {
       case AppLifecycleState.resumed:
         // App came back to foreground - check if session is still valid
-        if (!widget.authService.checkSessionValidity()) {
-          // Session expired, user will be automatically logged out
-          // The UI will rebuild and show login screen
-          debugPrint('Session expired due to inactivity');
-        }
+        widget.authService.checkSessionValidity().then((isValid) {
+          if (!isValid) {
+            // Session expired, user will be automatically logged out
+            // The UI will rebuild and show login screen
+            debugPrint('Session expired due to inactivity');
+          }
+        });
         break;
       case AppLifecycleState.inactive:
       case AppLifecycleState.paused:
