@@ -6,11 +6,13 @@ import 'package:nexxpharma/services/user_service.dart';
 import 'package:nexxpharma/services/sync_service.dart';
 import 'package:nexxpharma/services/stock_in_service.dart';
 import 'package:nexxpharma/services/stock_out_service.dart';
+import 'package:nexxpharma/services/notification_service.dart';
 import 'package:nexxpharma/ui/screens/login_screen.dart';
 import 'package:nexxpharma/ui/screens/stock_in_out_screen.dart';
 import 'package:nexxpharma/ui/screens/activation_screen.dart';
 import 'package:nexxpharma/services/activation_service.dart';
 import 'package:nexxpharma/ui/screens/initial_sync_screen.dart';
+import 'package:nexxpharma/ui/widgets/toast_overlay.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stack_trace/stack_trace.dart';
 
@@ -37,6 +39,7 @@ void main() async {
   final stockInService = StockInService(database);
   final stockOutService = StockOutService(database);
   final activationService = ActivationService(database, settingsService);
+  final notificationService = NotificationService();
 
   runApp(
     MyApp(
@@ -47,6 +50,7 @@ void main() async {
       stockInService: stockInService,
       stockOutService: stockOutService,
       activationService: activationService,
+      notificationService: notificationService,
     ),
   );
 }
@@ -59,6 +63,7 @@ class MyApp extends StatelessWidget {
   final StockInService stockInService;
   final StockOutService stockOutService;
   final ActivationService activationService;
+  final NotificationService notificationService;
 
   const MyApp({
     super.key,
@@ -69,6 +74,7 @@ class MyApp extends StatelessWidget {
     required this.stockInService,
     required this.stockOutService,
     required this.activationService,
+    required this.notificationService,
   });
 
   @override
@@ -140,6 +146,12 @@ class MyApp extends StatelessWidget {
               ),
             ),
           ),
+          builder: (context, child) {
+            return ToastOverlay(
+              notificationService: notificationService,
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
           home:
               activationService.activationState == null ||
                   authService.hasUsers == null
