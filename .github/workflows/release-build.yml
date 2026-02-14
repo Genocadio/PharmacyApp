@@ -34,13 +34,13 @@ jobs:
       # Copy Inner Build into installer folder
       - name: Prepare Installer Folder
         run: |
-          if not exist "build\windows-x64-for-installer" (
-            echo Error: Inner build artifact not found
-            exit /b 1
-          )
-          if exist "installer\Release" rmdir /s /q "installer\Release"
-          mkdir "installer\Release"
-          xcopy /E /I /Y "build\windows-x64-for-installer\*" "installer\Release\"
+          if (-not (Test-Path "build\windows-x64-for-installer")) {
+            Write-Error "Error: Inner build artifact not found"
+            exit 1
+          }
+          if (Test-Path "installer\Release") { Remove-Item "installer\Release" -Recurse -Force }
+          New-Item -ItemType Directory -Path "installer\Release" -Force | Out-Null
+          Copy-Item -Path "build\windows-x64-for-installer\*" -Destination "installer\Release\" -Recurse -Force
 
       # Install Inno Setup
       - name: Install Inno Setup
@@ -50,18 +50,18 @@ jobs:
       - name: Get Version
         id: version
         run: |
-          if "${{ github.event.inputs.version }}" != "" (
-            echo version=${{ github.event.inputs.version }} >> $env:GITHUB_OUTPUT
-          ) else (
+          if ("${{ github.event.inputs.version }}" -ne "") {
+            echo "version=${{ github.event.inputs.version }}" >> $env:GITHUB_OUTPUT
+          } else {
             $version = Select-String -Path "pubspec.yaml" -Pattern "version: ([0-9.]+)" | ForEach-Object { $_.Matches[0].Groups[1].Value }
-            echo version=$version >> $env:GITHUB_OUTPUT
-          )
+            echo "version=$version" >> $env:GITHUB_OUTPUT
+          }
 
       # Create output directory
       - name: Create Output Directory
         run: |
-          if exist "installer\output" rmdir /s /q "installer\output"
-          mkdir "installer\output"
+          if (Test-Path "installer\output") { Remove-Item "installer\output" -Recurse -Force }
+          New-Item -ItemType Directory -Path "installer\output" -Force | Out-Null
 
       # Build Installer using .iss script
       - name: Build Installer
