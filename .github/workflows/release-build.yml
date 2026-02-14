@@ -34,7 +34,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id || github.run_id }}
 
-      # Prepare Installer Folder
+      # Prepare Installer Folder with organized structure
       - name: Prepare Installer Folder
         run: |
           if (-not (Test-Path "build\windows-x64-for-installer")) {
@@ -42,8 +42,34 @@ jobs:
             exit 1
           }
           if (Test-Path "installer\Release") { Remove-Item "installer\Release" -Recurse -Force }
-          New-Item -ItemType Directory -Path "installer\Release" -Force | Out-Null
-          Copy-Item -Path "build\windows-x64-for-installer\*" -Destination "installer\Release\" -Recurse -Force
+          New-Item -ItemType Directory -Path "installer\Release\bin" -Force | Out-Null
+          New-Item -ItemType Directory -Path "installer\Release\lib" -Force | Out-Null
+          
+          # Extract zip file from inner build
+          $sourceZip = Get-ChildItem "build\windows-x64-for-installer\*.zip" -ErrorAction SilentlyContinue
+          if (-not $sourceZip) {
+            Write-Error "Error: No zip file found in build\windows-x64-for-installer"
+            exit 1
+          }
+          
+          Write-Host "Extracting: $($sourceZip.FullName)"
+          Expand-Archive -Path $sourceZip.FullName -DestinationPath "installer\Release\temp" -Force
+          $sourceDir = "installer\Release\temp"
+          
+          # Copy executable to bin
+          Get-ChildItem -Path $sourceDir -Filter "*.exe" -Recurse | Copy-Item -Destination "installer\Release\bin\" -Force
+          
+          # Copy DLLs to lib
+          Get-ChildItem -Path $sourceDir -Filter "*.dll" -Recurse | Copy-Item -Destination "installer\Release\lib\" -Force
+          
+          # Copy other files (if any non-standard content) to lib, EXCLUDING zip files
+          Get-ChildItem -Path $sourceDir -Exclude "*.exe","*.dll","*.zip" -Recurse | Where-Object { $_.PSIsContainer -eq $false } | Copy-Item -Destination "installer\Release\lib\" -Force
+          
+          # Cleanup temp folder
+          Remove-Item "installer\Release\temp" -Recurse -Force -ErrorAction SilentlyContinue
+          
+          Write-Host "Installer preparation complete. Contents:"
+          Get-ChildItem -Path "installer\Release" -Recurse | ForEach-Object { Write-Host $_.FullName }
 
       # Install Inno Setup
       - name: Install Inno Setup

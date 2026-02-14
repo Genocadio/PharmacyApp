@@ -1,6 +1,6 @@
 #ifndef APPVERSION
   ; Try to read version from the built exe, fallback to 1.0.0
-  #define APPVERSION GetStringFileInfo(AddBackslash(SourcePath) + "Release\NexxPharma.exe", "ProductVersion")
+  #define APPVERSION GetStringFileInfo(AddBackslash(SourcePath) + "Release\bin\NexxPharma.exe", "ProductVersion")
   #if APPVERSION == ""
     #define APPVERSION "1.0.0"
   #endif
@@ -14,7 +14,7 @@ AppCopyright=Copyright 2026 NexxServe
 DefaultDirName={autopf}\NexxPharma
 DefaultGroupName=NexxPharma
 OutputDir=output
-OutputBaseFilename=NexxPharmaSetup-{#APPVERSION}
+OutputBaseFilename=install
 Compression=lzma
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64
@@ -24,11 +24,13 @@ WizardStyle=modern
 ShowLanguageDialog=no
 
 [Files]
-; Copy everything from inner build Release folder
-Source: "Release\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+; Copy executable to app directory
+Source: "Release\bin\NexxPharma.exe"; DestDir: "{app}"; Flags: ignoreversion
+; Copy DLLs to lib subdirectory
+Source: "Release\lib\*"; DestDir: "{app}\lib"; Flags: recursesubdirs ignoreversion
 ; Copy app icon
 Source: "..\windows\runner\resources\app_icon.ico"; DestDir: "{app}"; Flags: ignoreversion
-; Copy updater script
+; Copy updater script to root
 Source: "..\updater\update.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
