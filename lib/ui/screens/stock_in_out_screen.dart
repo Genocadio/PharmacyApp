@@ -3265,6 +3265,7 @@ class _AddStockFlowState extends State<_AddStockFlow> {
             : _locationController.text,
         expiryDate: _expiryDate,
         reorderLevel: int.tryParse(_reorderController.text),
+        deviceType: widget.deviceType,
       );
 
       if (widget.stockToEdit != null) {

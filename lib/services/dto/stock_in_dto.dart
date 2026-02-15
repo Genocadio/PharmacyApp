@@ -1,5 +1,7 @@
 /// Data Transfer Objects for Stock In operations
 
+import 'package:nexxpharma/data/tables.dart';
+
 /// DTO for creating or updating stock in
 class StockInCreateDTO {
   final String productId;
@@ -9,6 +11,7 @@ class StockInCreateDTO {
   final String? batchNumber;
   final DateTime? expiryDate;
   final int? reorderLevel;
+  final DeviceType deviceType;
 
   StockInCreateDTO({
     required this.productId,
@@ -18,6 +21,7 @@ class StockInCreateDTO {
     this.batchNumber,
     this.expiryDate,
     this.reorderLevel,
+    this.deviceType = DeviceType.PHARMACY_RETAIL,
   });
 
   /// Validate the DTO
@@ -28,7 +32,11 @@ class StockInCreateDTO {
     if (quantity < 0) {
       throw ArgumentError('Quantity must be non-negative');
     }
-    if (pricePerUnit <= 0) {
+    if (deviceType == DeviceType.CLINIC_INVENTORY) {
+      if (pricePerUnit < 0) {
+        throw ArgumentError('Price per unit must be non-negative');
+      }
+    } else if (pricePerUnit <= 0) {
       throw ArgumentError('Price per unit must be greater than 0');
     }
     if (reorderLevel != null && reorderLevel! < 0) {
@@ -48,6 +56,7 @@ class StockInCreateDTO {
           ? DateTime.parse(json['expiryDate'] as String)
           : null,
       reorderLevel: json['reorderLevel'] as int?,
+      deviceType: _parseDeviceType(json['deviceType'] as String?),
     );
   }
 
@@ -61,7 +70,31 @@ class StockInCreateDTO {
       'batchNumber': batchNumber,
       'expiryDate': expiryDate?.toIso8601String(),
       'reorderLevel': reorderLevel,
+      'deviceType': _deviceTypeToString(deviceType),
     };
+  }
+
+  static String _deviceTypeToString(DeviceType type) {
+    switch (type) {
+      case DeviceType.PHARMACY_RETAIL:
+        return 'PHARMACY_RETAIL';
+      case DeviceType.PHARMACY_WHOLESALE:
+        return 'PHARMACY_WHOLESALE';
+      case DeviceType.CLINIC_INVENTORY:
+        return 'CLINIC_INVENTORY';
+    }
+  }
+
+  static DeviceType _parseDeviceType(String? value) {
+    switch (value) {
+      case 'PHARMACY_WHOLESALE':
+        return DeviceType.PHARMACY_WHOLESALE;
+      case 'CLINIC_INVENTORY':
+        return DeviceType.CLINIC_INVENTORY;
+      case 'PHARMACY_RETAIL':
+      default:
+        return DeviceType.PHARMACY_RETAIL;
+    }
   }
 }
 
