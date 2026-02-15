@@ -56,15 +56,15 @@ void main() async {
   // Configure auto-update service (Windows only)
   if (Platform.isWindows) {
     AutoUpdateService().configure(
-      owner: 'YOUR_GITHUB_ORG',  // TODO: Replace with your GitHub organization/username
-      repo: 'nexxpharma',
+      owner: 'Genocadio',
+      repo: 'PharmacyApp',
     );
     
     // Initialize automatic update checks
-    // Checks every 6 hours and performs initial check 10 seconds after startup
+    // Checks every 5 hours and performs initial check 10 seconds after startup
     AutoUpdateService().initialize(
       autoCheck: true,
-      checkInterval: const Duration(hours: 6),
+      checkInterval: const Duration(hours: 5),
       checkImmediately: true,
     );
   }

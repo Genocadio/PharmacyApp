@@ -75,7 +75,7 @@ jobs:
           if ("${{ github.event.inputs.version }}" -ne "") {
             echo "version=${{ github.event.inputs.version }}" >> $env:GITHUB_OUTPUT
           } else {
-            $version = Select-String -Path "pubspec.yaml" -Pattern "version: ([0-9.]+)" | ForEach-Object { $_.Matches[0].Groups[1].Value }
+            $version = (Select-String -Path pubspec.yaml -Pattern "^version: (.+)" | ForEach-Object { $_.Matches[0].Groups[1].Value })
             echo "version=$version" >> $env:GITHUB_OUTPUT
           }
 
@@ -106,5 +106,6 @@ jobs:
           name: nexxpharma v${{ steps.version.outputs.version }}
           files: installer/output/*.exe
           overwrite_files: true
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

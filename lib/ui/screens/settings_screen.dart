@@ -736,83 +736,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   List<Widget> _buildUpdateSection(ThemeData theme, Color accentColor) {
     return [
       const Divider(height: 1),
-      // Automatic update checks toggle
-      ListenableBuilder(
-        listenable: AutoUpdateService(),
-        builder: (context, _) {
-          final updateService = AutoUpdateService();
-          final lastCheck = updateService.lastCheckTime;
-          final lastCheckStr = lastCheck != null
-              ? 'Last checked: ${_formatLastCheckTime(lastCheck)}'
-              : 'Never checked';
-
-          return SwitchListTile(
-            title: const Text('Automatic Update Checks'),
-            subtitle: Text(lastCheckStr),
-            secondary: Icon(Icons.autorenew, color: accentColor),
-            value: updateService.autoCheckEnabled,
-            activeColor: accentColor,
-            onChanged: (value) {
-              updateService.setAutoCheckEnabled(value);
-              if (value) {
-                Toast.success('Automatic update checks enabled');
-              } else {
-                Toast.info('Automatic update checks disabled');
-              }
-            },
-          );
-        },
-      ),
-      // Check interval selector
-      ListenableBuilder(
-        listenable: AutoUpdateService(),
-        builder: (context, _) {
-          final updateService = AutoUpdateService();
-          if (!updateService.autoCheckEnabled) {
-            return const SizedBox.shrink();
-          }
-
-          final interval = updateService.checkInterval;
-          final hours = interval.inHours;
-
-          return ListTile(
-            title: const Text('Check Interval'),
-            subtitle: Text('Check every $hours hours'),
-            leading: Icon(Icons.schedule, color: accentColor),
-            trailing: PopupMenuButton<int>(
-              onSelected: (hours) {
-                updateService.setCheckInterval(Duration(hours: hours));
-                Toast.success('Check interval updated to $hours hours');
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(value: 1, child: Text('Every 1 hour')),
-                const PopupMenuItem(value: 3, child: Text('Every 3 hours')),
-                const PopupMenuItem(value: 6, child: Text('Every 6 hours')),
-                const PopupMenuItem(value: 12, child: Text('Every 12 hours')),
-                const PopupMenuItem(value: 24, child: Text('Every 24 hours')),
-              ],
-              child: Chip(
-                label: Text('$hours hours'),
-                avatar: const Icon(Icons.arrow_drop_down, size: 18),
-              ),
-            ),
-          );
-        },
-      ),
-      const Divider(height: 1),
-      // Manual check button and status
+      // Manual check button and status (auto-update checks every 5 hours in background)
       ListenableBuilder(
         listenable: AutoUpdateService(),
         builder: (context, _) {
           final updateService = AutoUpdateService();
           final status = updateService.status;
           final isUpdateAvailable = updateService.isUpdateAvailable;
+          final lastCheck = updateService.lastCheckTime;
+          final lastCheckStr = lastCheck != null
+              ? 'Last checked: ${_formatLastCheckTime(lastCheck)}'
+              : 'Never checked';
 
           return ListTile(
             title: Text(
               isUpdateAvailable ? 'Update Available' : 'Check for Updates',
             ),
-            subtitle: _buildUpdateSubtitle(status, updateService),
+            subtitle: _buildUpdateSubtitle(status, updateService, lastCheckStr),
             leading: Icon(
               _getUpdateIcon(status),
               color: isUpdateAvailable ? Colors.orange : accentColor,
@@ -840,7 +780,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Widget? _buildUpdateSubtitle(UpdateStatus status, AutoUpdateService service) {
+  Widget? _buildUpdateSubtitle(UpdateStatus status, AutoUpdateService service, String lastCheckStr) {
     switch (status) {
       case UpdateStatus.checking:
         return const Text('Checking for updates...');
@@ -859,14 +799,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case UpdateStatus.installing:
         return const Text('Installing update...');
       case UpdateStatus.upToDate:
-        return const Text('You are on the latest version');
+        return Text('You are on the latest version • $lastCheckStr');
       case UpdateStatus.error:
         return Text(
           service.errorMessage ?? 'Update check failed',
           style: const TextStyle(color: Colors.red),
         );
       case UpdateStatus.noConnection:
-        return const Text('No internet connection');
+        return Text('No internet connection • $lastCheckStr');
     }
   }
 

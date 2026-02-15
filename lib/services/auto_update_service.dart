@@ -85,9 +85,9 @@ class AutoUpdateService extends ChangeNotifier {
   factory AutoUpdateService() => _instance;
   AutoUpdateService._internal();
 
-  // GitHub repository info - CONFIGURE THESE
-  String _githubOwner = 'YOUR_ORG';  // Change this to your GitHub organization/username
-  String _githubRepo = 'nexxpharma';  // Change this to your repository name
+  // GitHub repository info
+  String _githubOwner = 'Genocadio';
+  String _githubRepo = 'PharmacyApp';
 
   UpdateStatus _status = UpdateStatus.upToDate;
   String? _errorMessage;
@@ -97,7 +97,7 @@ class AutoUpdateService extends ChangeNotifier {
   String? _downloadedZipPath;
   Timer? _checkTimer;
   bool _autoCheckEnabled = true;
-  Duration _checkInterval = const Duration(hours: 6);  // Check every 6 hours by default
+  Duration _checkInterval = const Duration(hours: 5);  // Check every 5 hours by default
   DateTime? _lastCheckTime;
 
   UpdateStatus get status => _status;
