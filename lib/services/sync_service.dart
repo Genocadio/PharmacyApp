@@ -167,12 +167,23 @@ class SyncService extends ChangeNotifier {
 
     print('Starting full sync...');
 
+    // Track dataset progress
+    Map<String, Map<String, dynamic>> datasetStats = {};
+    
     for (int i = 0; i < datasets.length; i++) {
       final dataset = datasets[i];
       int page = 0;
       bool hasMore = true;
       int serverCursor = 0;
       bool pendingProductTokenRefresh = false;
+      
+      // Initialize stats for this dataset
+      datasetStats[dataset] = {
+        'totalItems': 0,
+        'itemsProcessed': 0,
+        'totalPages': 0,
+        'pagesProcessed': 0,
+      };
 
       print('Syncing dataset: $dataset');
 
@@ -213,10 +224,16 @@ class SyncService extends ChangeNotifier {
         final body = json.decode(response.body);
         final List<dynamic> data = body['data'];
         hasMore = body['hasMore'] ?? false;
+        final int totalCount = body['total'] ?? 0; // Get total from server if available
         page = body['nextCursor'] ?? (page + 1); // Use nextCursor for page
         serverCursor = body['serverCursor'] ?? 0;
 
-        print('Received ${data.length} items for $dataset. Has more: $hasMore');
+        // Update dataset stats
+        datasetStats[dataset]!['totalItems'] = totalCount > 0 ? totalCount : (datasetStats[dataset]!['itemsProcessed'] as int) + data.length;
+        datasetStats[dataset]!['itemsProcessed'] = (datasetStats[dataset]!['itemsProcessed'] as int) + data.length;
+        datasetStats[dataset]!['pagesProcessed'] = (datasetStats[dataset]!['pagesProcessed'] as int) + 1;
+
+        print('Received ${data.length} items for $dataset. Total: ${datasetStats[dataset]!['totalItems']} Has more: $hasMore');
 
         // Import data into DB
         if (dataset == 'insurances') {
@@ -227,9 +244,20 @@ class SyncService extends ChangeNotifier {
           await _db.importProductInsurances(data.cast<Map<String, dynamic>>());
         }
 
-        // Update progress (roughly)
-        _progress =
-            (i / totalSteps) + (1.0 / totalSteps * (hasMore ? 0.5 : 1.0));
+        // Calculate accurate progress based on total items
+        double datasetProgress = 0.0;
+        if (datasetStats[dataset]!['totalItems'] > 0) {
+          datasetProgress = (datasetStats[dataset]!['itemsProcessed'] as int) / (datasetStats[dataset]!['totalItems'] as int);
+        } else {
+          datasetProgress = hasMore ? 0.5 : 1.0;
+        }
+        datasetProgress = datasetProgress.clamp(0.0, 1.0);
+        
+        // Overall progress across datasets
+        double overallProgress = (i / totalSteps) + (datasetProgress / totalSteps);
+        _progress = overallProgress.clamp(0.0, 1.0);
+        _itemsSynced = datasetStats.values.fold(0, (sum, stats) => sum + (stats['itemsProcessed'] as int));
+        
         notifyListeners();
       }
 
@@ -247,6 +275,10 @@ class SyncService extends ChangeNotifier {
   Future<void> _incrementalSync() async {
     bool hasMore = true;
     int sinceCursor = _settings.lastSyncCursor;
+    int totalChangesProcessed = 0;
+    int totalChanges = 0; // Will be set when we get first response
+    bool totalCountKnown = false;
+    
     print('Starting incremental sync from cursor: $sinceCursor');
 
     while (hasMore) {
@@ -271,9 +303,16 @@ class SyncService extends ChangeNotifier {
       final body = json.decode(response.body);
       final List<dynamic> changes = body['changes'];
       hasMore = body['hasMore'] ?? false;
+      final int total = body['total'] ?? 0;
       int serverCursor = body['serverCursor'] ?? sinceCursor;
 
-      print('Received ${changes.length} changes. Server cursor: $serverCursor');
+      // Set total count from first response if available
+      if (!totalCountKnown && total > 0) {
+        totalChanges = total;
+        totalCountKnown = true;
+      }
+
+      print('Received ${changes.length} changes. Total: $totalChanges Server cursor: $serverCursor');
 
       for (final change in changes) {
         final entity = change['entity'];
@@ -354,12 +393,22 @@ class SyncService extends ChangeNotifier {
         }
       }
 
+      // Update progress
+      totalChangesProcessed += changes.length;
+      if (totalCountKnown && totalChanges > 0) {
+        // Accurate progress based on total items
+        _progress = (totalChangesProcessed / totalChanges).clamp(0.0, 1.0);
+      } else {
+        // Fallback: estimate progress
+        _progress = hasMore ? (0.5 + (totalChangesProcessed / 1000) * 0.5).clamp(0.0, 0.99) : 1.0;
+      }
+      _itemsSynced = totalChangesProcessed;
+
       // Update local state and acknowledge
       sinceCursor = serverCursor;
       await _settings.updateSyncState(sinceCursor, DateTime.now());
       await _sendAcknowledgment(serverCursor, SyncStatus.success);
 
-      _progress = hasMore ? 0.5 : 1.0;
       notifyListeners();
     }
   }

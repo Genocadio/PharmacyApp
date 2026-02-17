@@ -76,6 +76,14 @@ class _StockRequestScreenState extends State<StockRequestScreen>
         title: const Text('Stock Requests'),
         bottom: TabBar(
           controller: _tabController,
+          indicator: UnderlineTabIndicator(
+            borderSide: BorderSide(
+              color: Colors.white,
+              width: 3,
+            ),
+          ),
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white.withOpacity(0.6),
           tabs: const [
             Tab(text: 'All'),
             Tab(text: 'Drafts'),

@@ -1,5 +1,3 @@
-/// Data Transfer Objects for Stock In operations
-
 import 'package:nexxpharma/data/tables.dart';
 
 /// DTO for creating or updating stock in

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:nexxpharma/services/auth_service.dart';
 import 'package:nexxpharma/ui/widgets/toast.dart';
 
@@ -66,11 +65,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      SvgPicture.asset(
-                        'lib/media/logo.svg',
+                      Image.asset(
+                        'lib/media/logo.png',
                         height: 100,
                         width: 100,
-                        placeholderBuilder: (BuildContext context) => Icon(
+                        errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => Icon(
                           Icons.medication,
                           size: 64,
                           color: accentColor,

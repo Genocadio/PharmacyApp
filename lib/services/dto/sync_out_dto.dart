@@ -1,6 +1,4 @@
-/// Data Transfer Objects for SyncOut operations
-/// Covers workers, stock movements, and sales snapshots
-
+/// Data Transfer Objects for SyncOut operations - covers workers, stock movements, and sales snapshots
 class SyncOutPayload {
   final List<WorkerSyncPayload> workers;
   final List<StockInSyncPayload> stocksIn;

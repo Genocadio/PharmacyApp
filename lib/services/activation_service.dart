@@ -114,7 +114,6 @@ class ActivationService extends ChangeNotifier {
     try {
       // 1. Location is optional and fetched on app launch/status updates.
       // Avoid blocking activation on a location lookup.
-      Position? position;
 
       // 2. Get app version
       final packageInfo = await PackageInfo.fromPlatform();
@@ -144,8 +143,6 @@ class ActivationService extends ChangeNotifier {
         phone: phone,
         code: code,
         publicKey: publicKey.toString(),
-        latitude: position?.latitude,
-        longitude: position?.longitude,
         appVersion: appVersion,
         deviceName: deviceName,
       );
@@ -246,9 +243,10 @@ class ActivationService extends ChangeNotifier {
       signedContext.deviceId,
       payload,
     );
-    final signature = signedContext.privateKey.createSignature(
-      signaturePayload,
+    final signatureBytes = signedContext.privateKey.createSHA256Signature(
+      utf8.encode(signaturePayload),
     );
+    final signature = base64Encode(signatureBytes);
 
     final request = DeviceSignedRequest<UpdateDeviceInput>(
       deviceId: signedContext.deviceId,
@@ -305,9 +303,10 @@ class ActivationService extends ChangeNotifier {
       signedContext.deviceId,
       payloadJson,
     );
-    final signature = signedContext.privateKey.createSignature(
-      signaturePayload,
+    final signatureBytes = signedContext.privateKey.createSHA256Signature(
+      utf8.encode(signaturePayload),
     );
+    final signature = base64Encode(signatureBytes);
 
     final request = DeviceSignedRequest<CommandAcknowledgmentPayload>(
       deviceId: signedContext.deviceId,
@@ -355,9 +354,10 @@ class ActivationService extends ChangeNotifier {
       signedContext.deviceId,
       <String, dynamic>{},
     );
-    final signature = signedContext.privateKey.createSignature(
-      signaturePayload,
+    final signatureBytes = signedContext.privateKey.createSHA256Signature(
+      utf8.encode(signaturePayload),
     );
+    final signature = base64Encode(signatureBytes);
 
     final request = DeviceSignedRequest<void>(
       deviceId: signedContext.deviceId,
@@ -526,7 +526,10 @@ class ActivationService extends ChangeNotifier {
     );
     // CRITICAL: Sign with CURRENT private key, not new one!
     // Server still has current public key and needs to verify this signature first
-    final signature = signedContext.privateKey.createSignature(signaturePayload);
+    final signatureBytes = signedContext.privateKey.createSHA256Signature(
+      utf8.encode(signaturePayload),
+    );
+    final signature = base64Encode(signatureBytes);
 
     final request = DeviceSignedRequest<UpdatePublicKeyPayload>(
       deviceId: signedContext.deviceId,

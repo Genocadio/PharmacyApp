@@ -1,5 +1,3 @@
-/// Data Transfer Objects for Insurance operations
-
 /// DTO for insurance response with full details
 class InsuranceDTO {
   final String id;

@@ -39,7 +39,6 @@ dependencies:
   drift: ^2.23.0
   drift_flutter: ^0.2.0
   uuid: ^4.5.1
-  flutter_svg: ^2.0.10+1
   shared_preferences: ^2.3.5
   http: ^1.2.1
   intl: ^0.20.2
@@ -81,7 +80,7 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - lib/media/logo.svg
+    - lib/media/logo.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

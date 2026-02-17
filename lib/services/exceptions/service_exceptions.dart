@@ -1,5 +1,3 @@
-/// Custom exceptions for service layer operations
-
 /// Thrown when a requested resource is not found
 class ResourceNotFoundException implements Exception {
   final String resourceType;

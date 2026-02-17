@@ -281,15 +281,25 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
                 Container(
                   decoration: BoxDecoration(
                     color: theme.brightness == Brightness.light
-                        ? Colors.grey.shade50
-                        : Colors.grey.shade900,
+                        ? theme.scaffoldBackgroundColor
+                        : theme.cardColor,
                     border: Border(
                       bottom: BorderSide(
                         color: theme.dividerColor.withOpacity(0.1),
                       ),
                     ),
                   ),
-                  child: const TabBar(
+                  child: TabBar(
+                    indicator: UnderlineTabIndicator(
+                      borderSide: BorderSide(
+                        color: accentColor,
+                        width: 3,
+                      ),
+                    ),
+                    labelColor: accentColor,
+                    unselectedLabelColor: theme.brightness == Brightness.light
+                        ? Colors.grey.shade600
+                        : Colors.grey.shade400,
                     tabs: [
                       Tab(
                         text: 'Stock In',
@@ -1120,22 +1130,34 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
               icon: const Icon(Icons.description_outlined),
               tooltip: 'View Invoice',
               onPressed: () async {
-                showDialog(
-                  context: context,
-                  builder: (context) => Dialog(
-                    insetPadding: const EdgeInsets.all(20),
-                    child: PdfPreview(
-                      build: (format) => InvoiceService.generateInvoice(
-                        stockOut,
-                        widget.settingsService.invoicePaperSize,
+                // Fetch module info for invoice
+                final moduleData = await widget.database.getModule();
+                if (mounted) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => Dialog(
+                      insetPadding: const EdgeInsets.all(20),
+                      child: PdfPreview(
+                        build: (format) => InvoiceService.generateInvoice(
+                          stockOut,
+                          widget.settingsService.invoicePaperSize,
+                          moduleInfo: moduleData != null
+                              ? ModuleInfo(
+                                  name: moduleData.name,
+                                  phone: moduleData.phone,
+                                  email: moduleData.email,
+                                  logoUrl: moduleData.logoUrl,
+                                )
+                              : null,
+                        ),
+                        canChangePageFormat: false,
+                        canChangeOrientation: false,
+                        canDebug: false,
+                        actions: const [],
                       ),
-                      canChangePageFormat: false,
-                      canChangeOrientation: false,
-                      canDebug: false,
-                      actions: const [],
                     ),
-                  ),
-                );
+                  );
+                }
               },
             ),
           ),
@@ -5533,6 +5555,7 @@ class _StockOutFlowState extends State<_StockOutFlow> {
   }
 
   /// Build read-only view of auto-allocated stocks
+  // ignore: unused_element
   Widget _buildAutoAllocatedStocksView(_StockOutItemForm item) {
     return SizedBox(
       width: 280,
@@ -5663,6 +5686,7 @@ class _StockOutFlowState extends State<_StockOutFlow> {
   }
 
   /// Build manual stock selection view (can only be used when not in auto mode)
+  // ignore: unused_element
   Widget _buildManualStockSelectionView(
     _StockOutItemForm item,
     BuildContext context,

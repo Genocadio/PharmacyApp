@@ -1,5 +1,3 @@
-/// Data Transfer Objects for Stock Out operations
-
 import 'package:nexxpharma/data/tables.dart';
 
 /// DTO for creating a stock out item (flexible for different device types)

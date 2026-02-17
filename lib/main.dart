@@ -267,10 +267,37 @@ class _MainScreenWithSyncState extends State<_MainScreenWithSync> with WidgetsBi
     });
     // Add lifecycle observer
     WidgetsBinding.instance.addObserver(this);
+    
+    // Listen to auth service changes (including session warnings)
+    widget.authService.addListener(_onAuthServiceChange);
+  }
+
+  void _onAuthServiceChange() {
+    // Show warning if session is about to expire
+    if (widget.authService.shouldShowSessionWarning) {
+      final timeRemaining = widget.authService.sessionTimeRemaining ?? 0;
+      final minutesRemaining = (timeRemaining / 60).ceil();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Your session will expire in $minutesRemaining minute${minutesRemaining > 1 ? 's' : ''}. '
+            'Click any button or interact with the app to extend your session.',
+          ),
+          duration: const Duration(seconds: 6),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.orange,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      );
+    }
   }
 
   @override
   void dispose() {
+    widget.authService.removeListener(_onAuthServiceChange);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }

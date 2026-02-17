@@ -3,6 +3,7 @@ import 'package:nexxpharma/services/dto/user_dto.dart';
 import 'package:nexxpharma/services/user_service.dart';
 import 'package:nexxpharma/services/exceptions/service_exceptions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 
 /// Service to manage authentication state across the application
 class AuthService extends ChangeNotifier {
@@ -10,9 +11,14 @@ class AuthService extends ChangeNotifier {
   final SharedPreferences _prefs;
   UserDTO? _currentUser;
   DateTime? _lastActivityTime;
+  Timer? _sessionCheckTimer;
   static const _sessionTimeout = Duration(minutes: 20);
+  static const _sessionCheckInterval = Duration(seconds: 10); // Check every 10 seconds
+  static const _sessionWarningThreshold = Duration(minutes: 2); // Warn 2 minutes before expiry
   static const _keyUserId = 'auth_user_id';
   static const _keyLastActivity = 'auth_last_activity';
+  
+  bool _sessionWarningShown = false; // Track if warning has been shown
 
   UserService get userService => _userService;
   bool _isLoading = false;
@@ -29,6 +35,11 @@ class AuthService extends ChangeNotifier {
     
     // Restore session if exists
     await _restoreSession();
+    
+    // Start session monitoring if user is authenticated
+    if (_currentUser != null) {
+      _startSessionMonitoring();
+    }
     
     notifyListeners();
   }
@@ -75,11 +86,58 @@ class AuthService extends ChangeNotifier {
     await _prefs.remove(_keyLastActivity);
   }
 
+  /// Start monitoring session for expiration
+  void _startSessionMonitoring() {
+    // Cancel any existing timer first
+    _sessionCheckTimer?.cancel();
+    _sessionWarningShown = false; // Reset warning flag
+    
+    // Create a new periodic timer that checks session every 10 seconds
+    _sessionCheckTimer = Timer.periodic(_sessionCheckInterval, (_) {
+      if (_currentUser == null) return;
+      
+      final timeSinceLastActivity = DateTime.now().difference(_lastActivityTime!);
+      
+      // If completely expired, logout
+      if (isSessionExpired) {
+        debugPrint('Session expired during active monitoring - logging out');
+        logout(); // This will also cancel the timer
+      }
+      // If approaching expiry (2 minutes left), show warning once
+      else if (timeSinceLastActivity > (_sessionTimeout - _sessionWarningThreshold) && !_sessionWarningShown) {
+        _sessionWarningShown = true;
+        debugPrint('Session expiring soon - notifying user');
+        notifyListeners(); // Notify UI that warning should be shown
+      }
+      // If activity was resumed, reset warning
+      else if (timeSinceLastActivity < (_sessionTimeout - _sessionWarningThreshold)) {
+        _sessionWarningShown = false;
+      }
+    });
+  }
+
+  /// Stop monitoring session (called on logout)
+  void _stopSessionMonitoring() {
+    _sessionCheckTimer?.cancel();
+    _sessionCheckTimer = null;
+  }
+
   UserDTO? get currentUser => _currentUser;
   bool get isAuthenticated => _currentUser != null;
   bool? get hasUsers => _hasUsers;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  
+  /// Get time remaining before session expires (in seconds)
+  int? get sessionTimeRemaining {
+    if (_lastActivityTime == null || _currentUser == null) return null;
+    final timeSinceLastActivity = DateTime.now().difference(_lastActivityTime!);
+    final remainingTime = _sessionTimeout - timeSinceLastActivity;
+    return remainingTime.inSeconds > 0 ? remainingTime.inSeconds : 0;
+  }
+  
+  /// Check if session warning should be shown
+  bool get shouldShowSessionWarning => _sessionWarningShown;
   
   /// Check if the session has expired (more than 20 minutes of inactivity)
   bool get isSessionExpired {
@@ -94,7 +152,9 @@ class AuthService extends ChangeNotifier {
   void updateActivity() {
     if (_currentUser != null) {
       _lastActivityTime = DateTime.now();
+      _sessionWarningShown = false; // Reset warning when user is active
       _saveSession(); // Persist activity timestamp
+      notifyListeners(); // Notify UI that session is refreshed
     }
   }
   
@@ -125,6 +185,7 @@ class AuthService extends ChangeNotifier {
       _currentUser = await _userService.login(loginDTO);
       _lastActivityTime = DateTime.now(); // Initialize session time
       await _saveSession(); // Persist session
+      _startSessionMonitoring(); // Start checking for expiration
       _isLoading = false;
       notifyListeners();
       return true;
@@ -151,6 +212,7 @@ class AuthService extends ChangeNotifier {
       _currentUser = await _userService.register(createDTO);
       _lastActivityTime = DateTime.now(); // Initialize session time
       await _saveSession(); // Persist session
+      _startSessionMonitoring(); // Start checking for expiration
       _hasUsers = true;
       _isLoading = false;
       notifyListeners();
@@ -208,6 +270,7 @@ class AuthService extends ChangeNotifier {
 
   /// Log out the current user
   Future<void> logout() async {
+    _stopSessionMonitoring(); // Stop the session check timer
     _currentUser = null;
     _lastActivityTime = null;
     _error = null;

@@ -1,5 +1,3 @@
-/// DTOs for managing multi-stock selection with FEFO logic
-
 import 'package:nexxpharma/data/database.dart';
 
 /// Represents a single stock-in entry with metadata for UI display

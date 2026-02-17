@@ -4,23 +4,40 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:nexxpharma/services/dto/stock_out_dto.dart';
 import 'package:nexxpharma/services/settings_service.dart';
+import 'package:http/http.dart' as http;
+
+/// Simple module info class for invoice generation
+class ModuleInfo {
+  final String? name;
+  final String? phone;
+  final String? email;
+  final String? logoUrl;
+
+  ModuleInfo({
+    this.name,
+    this.phone,
+    this.email,
+    this.logoUrl,
+  });
+}
 
 class InvoiceService {
   static Future<Uint8List> generateInvoice(
     StockOutDTO stockOut,
-    InvoicePaperSize paperSize,
-  ) async {
+    InvoicePaperSize paperSize, {
+    ModuleInfo? moduleInfo,
+  }) async {
     switch (paperSize) {
       case InvoicePaperSize.a4:
-        return _generateA4Invoice(stockOut);
+        return _generateA4Invoice(stockOut, moduleInfo);
       case InvoicePaperSize.mm80:
-        return _generateReceiptInvoice(stockOut, PdfPageFormat.roll80);
+        return _generateReceiptInvoice(stockOut, PdfPageFormat.roll80, moduleInfo);
       case InvoicePaperSize.mm57:
-        return _generateReceiptInvoice(stockOut, PdfPageFormat.roll57);
+        return _generateReceiptInvoice(stockOut, PdfPageFormat.roll57, moduleInfo);
     }
   }
 
-  static Future<Uint8List> _generateA4Invoice(StockOutDTO stockOut) async {
+  static Future<Uint8List> _generateA4Invoice(StockOutDTO stockOut, ModuleInfo? moduleInfo) async {
     final pdf = pw.Document();
 
     final dateFormat = DateFormat('MMM dd, yyyy HH:mm');
@@ -29,6 +46,20 @@ class InvoiceService {
       decimalDigits: 0,
     );
 
+    // Load logo if available
+    pw.ImageProvider? logoImage;
+    if (moduleInfo?.logoUrl != null &&
+        (moduleInfo?.logoUrl?.isNotEmpty ?? false)) {
+      try {
+        final response = await http.get(Uri.parse(moduleInfo!.logoUrl!));
+        if (response.statusCode == 200) {
+          logoImage = pw.MemoryImage(response.bodyBytes);
+        }
+      } catch (e) {
+        // Logo failed to load, continue without it
+      }
+    }
+
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -36,27 +67,69 @@ class InvoiceService {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              // Header
+              // Header with logo and business info
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text(
-                    'INVOICE',
-                    style: pw.TextStyle(
-                      fontSize: 24,
-                      fontWeight: pw.FontWeight.bold,
+                  // Left side: Business info
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        if (moduleInfo?.name != null)
+                          pw.Text(
+                            moduleInfo!.name!,
+                            style: pw.TextStyle(
+                              fontSize: 18,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                          ),
+                        if (moduleInfo?.phone != null ||
+                            moduleInfo?.email != null) ...[
+                          pw.SizedBox(height: 4),
+                          if (moduleInfo!.phone != null)
+                            pw.Text(
+                              'Phone: ${moduleInfo.phone}',
+                              style: const pw.TextStyle(fontSize: 10),
+                            ),
+                          if (moduleInfo.email != null)
+                            pw.Text(
+                              'Email: ${moduleInfo.email}',
+                              style: const pw.TextStyle(fontSize: 10),
+                            ),
+                        ],
+                      ],
                     ),
                   ),
+                  // Right side: Logo and Invoice number
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
+                      if (logoImage != null)
+                        pw.Container(
+                          width: 80,
+                          height: 80,
+                          child: pw.Image(logoImage),
+                        ),
+                      pw.SizedBox(height: 8),
+                      pw.Text(
+                        'INVOICE',
+                        style: pw.TextStyle(
+                          fontSize: 24,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
                       pw.Text('Invoice #: INV-${stockOut.id}'),
-                      pw.Text('Date: ${dateFormat.format(stockOut.createdAt)}'),
+                      pw.Text(
+                          'Date: ${dateFormat.format(stockOut.createdAt)}'),
                     ],
                   ),
                 ],
               ),
               pw.SizedBox(height: 20),
+              pw.Divider(),
+              pw.SizedBox(height: 10),
 
               // Patient Info
               pw.Container(
@@ -88,7 +161,17 @@ class InvoiceService {
               pw.SizedBox(height: 20),
 
               // Items Table
-              pw.Table.fromTextArray(
+              pw.TableHelper.fromTextArray(
+                headers: ['Item', 'Qty', 'Unit Price', 'Ins. Pay', 'Total'],
+                data: stockOut.stockOutItems.map((item) {
+                  return [
+                    item.productName,
+                    item.quantitySold.toString(),
+                    currencyFormat.format(item.pricePerUnit),
+                    currencyFormat.format(item.insurancePays),
+                    currencyFormat.format(item.itemTotal),
+                  ] as List<dynamic>;
+                }).toList(),
                 headerStyle: pw.TextStyle(
                   fontWeight: pw.FontWeight.bold,
                   color: PdfColors.white,
@@ -104,16 +187,6 @@ class InvoiceService {
                   3: pw.Alignment.centerRight,
                   4: pw.Alignment.centerRight,
                 },
-                headers: ['Item', 'Qty', 'Unit Price', 'Ins. Pay', 'Total'],
-                data: stockOut.stockOutItems.map((item) {
-                  return [
-                    item.productName,
-                    item.quantitySold.toString(),
-                    currencyFormat.format(item.pricePerUnit),
-                    currencyFormat.format(item.insurancePays),
-                    currencyFormat.format(item.itemTotal),
-                  ];
-                }).toList(),
               ),
               pw.SizedBox(height: 20),
 
@@ -133,7 +206,8 @@ class InvoiceService {
                           ],
                         ),
                         pw.Divider(),
-                        if (stockOut.stockOutItems.any((i) => i.insurancePays > 0)) ...[
+                        if (stockOut.stockOutItems
+                            .any((i) => i.insurancePays > 0)) ...[
                           pw.Row(
                             mainAxisAlignment:
                                 pw.MainAxisAlignment.spaceBetween,
@@ -201,6 +275,7 @@ class InvoiceService {
   static Future<Uint8List> _generateReceiptInvoice(
     StockOutDTO stockOut,
     PdfPageFormat pageFormat,
+    ModuleInfo? moduleInfo,
   ) async {
     final pdf = pw.Document();
 
@@ -210,6 +285,20 @@ class InvoiceService {
       decimalDigits: 0,
     );
 
+    // Load logo if available for receipt
+    pw.ImageProvider? logoImage;
+    if (moduleInfo?.logoUrl != null &&
+        (moduleInfo?.logoUrl?.isNotEmpty ?? false)) {
+      try {
+        final response = await http.get(Uri.parse(moduleInfo!.logoUrl!));
+        if (response.statusCode == 200) {
+          logoImage = pw.MemoryImage(response.bodyBytes);
+        }
+      } catch (e) {
+        // Logo failed to load, continue without it
+      }
+    }
+
     pdf.addPage(
       pw.Page(
         pageFormat: pageFormat,
@@ -217,6 +306,47 @@ class InvoiceService {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
+              // Logo and Business Name
+              if (logoImage != null)
+                pw.Center(
+                  child: pw.Container(
+                    width: 40,
+                    height: 40,
+                    child: pw.Image(logoImage),
+                  ),
+                ),
+              if (logoImage != null) pw.SizedBox(height: 4),
+              if (moduleInfo?.name != null)
+                pw.Center(
+                  child: pw.Text(
+                    moduleInfo!.name!,
+                    style: pw.TextStyle(
+                      fontSize: 11,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+              if (moduleInfo?.name != null) pw.SizedBox(height: 2),
+              if (moduleInfo?.phone != null || moduleInfo?.email != null) ...[
+                if (moduleInfo!.phone != null)
+                  pw.Center(
+                    child: pw.Text(
+                      moduleInfo.phone!,
+                      style: const pw.TextStyle(fontSize: 7),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                if (moduleInfo.email != null)
+                  pw.Center(
+                    child: pw.Text(
+                      moduleInfo.email!,
+                      style: const pw.TextStyle(fontSize: 7),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+              ],
+
               // Header
               pw.Center(
                 child: pw.Text(
