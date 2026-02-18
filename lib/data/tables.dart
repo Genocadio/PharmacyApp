@@ -281,3 +281,37 @@ class Devices extends Table {
   DateTimeColumn get lastSeenAt => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime().nullable()();
 }
+
+// Payment Methods table for module payment configurations
+class PaymentMethods extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get moduleId =>
+      integer().references(Modules, #id, onDelete: KeyAction.cascade)();
+  TextColumn get account => text()();
+  TextColumn get currency => text().nullable()();
+  TextColumn get type => text()(); // MOMO, Bank, Card, etc.
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+// Workers table for user profiles synced from server
+class Workers extends Table {
+  TextColumn get id => text()(); // UUID from server
+  IntColumn get moduleId =>
+      integer().references(Modules, #id, onDelete: KeyAction.cascade)();
+  TextColumn get firstName => text()();
+  TextColumn get lastName => text()();
+  TextColumn get phone => text().nullable()();
+  TextColumn get email => text().nullable()();
+  TextColumn get role => textEnum<UserRole>()();
+  TextColumn get pinHash => text().nullable()(); // Hashed PIN
+  BoolColumn get active => boolean().withDefault(const Constant(true))();
+  IntColumn get version => integer().withDefault(const Constant(0))();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+

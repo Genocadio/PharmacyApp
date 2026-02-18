@@ -21,6 +21,7 @@ class ModuleResponse {
   final double? longitude;
   final ServiceType? serviceType;
   final ModuleSubtype? subType;
+  final List<ModulePaymentMethod> paymentMethods;
 
   ModuleResponse({
     this.id,
@@ -43,9 +44,19 @@ class ModuleResponse {
     this.longitude,
     this.serviceType,
     this.subType,
+    this.paymentMethods = const [],
   });
 
   factory ModuleResponse.fromJson(Map<String, dynamic> json) {
+    final paymentMethodsList = <ModulePaymentMethod>[];
+    if (json['paymentMethods'] != null) {
+      paymentMethodsList.addAll(
+        (json['paymentMethods'] as List).map(
+          (pm) => ModulePaymentMethod.fromJson(pm as Map<String, dynamic>),
+        ),
+      );
+    }
+
     return ModuleResponse(
       id: json['id'],
       moduleCode: json['moduleCode'],
@@ -91,6 +102,7 @@ class ModuleResponse {
               orElse: () => ModuleSubtype.PHARMACY_RETAIL,
             )
           : null,
+      paymentMethods: paymentMethodsList,
     );
   }
 
@@ -116,6 +128,7 @@ class ModuleResponse {
       'longitude': longitude,
       'serviceType': serviceType?.name,
       'subType': subType?.name,
+      'paymentMethods': paymentMethods.map((pm) => pm.toJson()).toList(),
     };
   }
 }
@@ -170,11 +183,13 @@ class DeviceApiResponse<T> {
 
   factory DeviceApiResponse.fromJson(
     Map<String, dynamic> json, {
-    T Function(Object? data)? parseData,
+    T? Function(Object? data)? parseData,
   }) {
     final commandsJson = json['commands'] as List<dynamic>?;
     return DeviceApiResponse(
-      data: parseData != null ? parseData(json['data']) : null,
+      data: parseData != null && json['data'] != null 
+          ? parseData(json['data']) 
+          : null,
       module: json['module'] != null
           ? ModuleResponse.fromJson(json['module'])
           : null,
@@ -431,6 +446,103 @@ class DeviceSignedRequest<T> {
       'deviceId': deviceId,
       'signature': signature,
       'data': encodeData != null ? encodeData(data) : data,
+    };
+  }
+}
+
+/// Payment method DTO for module payment configurations
+class ModulePaymentMethod {
+  final int? id;
+  final String account;
+  final String? currency;
+  final String type; // MOMO, Bank, Card, etc.
+
+  ModulePaymentMethod({
+    this.id,
+    required this.account,
+    this.currency,
+    required this.type,
+  });
+
+  factory ModulePaymentMethod.fromJson(Map<String, dynamic> json) {
+    return ModulePaymentMethod(
+      id: json['id'],
+      account: json['account'],
+      currency: json['currency'],
+      type: json['type'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'account': account,
+      'currency': currency,
+      'type': type,
+    };
+  }
+}
+
+/// Worker DTO for synced user profiles
+class WorkerDTO {
+  final String id; // UUID
+  final String firstName;
+  final String lastName;
+  final String? phone;
+  final String? email;
+  final UserRole role;
+  final String? pinHash;
+  final bool active;
+  final int version;
+  final DateTime? deletedAt;
+
+  WorkerDTO({
+    required this.id,
+    required this.firstName,
+    required this.lastName,
+    this.phone,
+    this.email,
+    required this.role,
+    this.pinHash,
+    this.active = true,
+    this.version = 0,
+    this.deletedAt,
+  });
+
+  factory WorkerDTO.fromJson(Map<String, dynamic> json) {
+    return WorkerDTO(
+      id: json['workerId'] ?? json['id'] ?? '',
+      firstName: json['firstName'] ?? '',
+      lastName: json['lastName'] ?? '',
+      phone: json['phone'],
+      email: json['email'],
+      role: json['role'] != null
+          ? UserRole.values.firstWhere(
+              (e) => e.name == json['role'],
+              orElse: () => UserRole.Assistant,
+            )
+          : UserRole.Assistant,
+      pinHash: json['pin'],
+      active: json['active'] ?? true,
+      version: json['version'] ?? 0,
+      deletedAt: json['deletedAt'] != null
+          ? DateTime.parse(json['deletedAt'])
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'workerId': id,
+      'firstName': firstName,
+      'lastName': lastName,
+      'phone': phone,
+      'email': email,
+      'role': role.name,
+      'pin': pinHash,
+      'active': active,
+      'version': version,
+      'deletedAt': deletedAt?.toIso8601String(),
     };
   }
 }

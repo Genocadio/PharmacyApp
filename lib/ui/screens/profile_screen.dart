@@ -26,10 +26,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _namesController = TextEditingController(text: user?.names);
     _emailController = TextEditingController(text: user?.email);
     _phoneController = TextEditingController(text: user?.phoneNumber);
+    widget.authService.addListener(_onAuthChanged);
+  }
+
+  void _onAuthChanged() {
+    if (mounted && !widget.authService.isAuthenticated) {
+      // Session expired, return to root (which will show login screen)
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
   }
 
   @override
   void dispose() {
+    widget.authService.removeListener(_onAuthChanged);
     _namesController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
@@ -59,6 +68,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Update activity to keep session alive
+    widget.authService.updateActivity();
+    
     final theme = Theme.of(context);
     final accentColor = theme.colorScheme.primary;
 

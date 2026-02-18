@@ -11,6 +11,7 @@ import 'package:nexxpharma/services/stock_out_service.dart';
 import 'package:nexxpharma/services/notification_service.dart';
 import 'package:nexxpharma/services/connectivity_service.dart';
 import 'package:nexxpharma/services/background_sync_manager.dart';
+import 'package:nexxpharma/services/device_state_manager.dart';
 import 'package:nexxpharma/ui/screens/login_screen.dart';
 import 'package:nexxpharma/ui/screens/stock_in_out_screen.dart';
 import 'package:nexxpharma/ui/screens/activation_screen.dart';
@@ -58,6 +59,13 @@ void main() async {
   // Initialize connectivity monitoring
   connectivityService.initialize();
 
+  // Create device state manager to consolidate device configuration changes
+  final deviceStateManager = DeviceStateManager(
+    database,
+    settingsService,
+    activationService,
+  );
+
   // Configure auto-update service (Windows only)
   if (Platform.isWindows) {
     AutoUpdateService().configure(
@@ -94,6 +102,7 @@ void main() async {
       notificationService: notificationService,
       connectivityService: connectivityService,
       backgroundSyncManager: backgroundSyncManager,
+      deviceStateManager: deviceStateManager,
     ),
   );
 }
@@ -127,6 +136,7 @@ class MyApp extends StatelessWidget {
   final NotificationService notificationService;
   final ConnectivityService connectivityService;
   final BackgroundSyncManager backgroundSyncManager;
+  final DeviceStateManager deviceStateManager;
 
   const MyApp({
     super.key,
@@ -140,6 +150,7 @@ class MyApp extends StatelessWidget {
     required this.notificationService,
     required this.connectivityService,
     required this.backgroundSyncManager,
+    required this.deviceStateManager,
   });
 
   @override
@@ -152,6 +163,7 @@ class MyApp extends StatelessWidget {
         activationService,
         backgroundSyncManager,
         connectivityService,
+        deviceStateManager,
       ]),
       builder: (context, child) {
         const accentColor = Color(0xFF121827);
@@ -235,6 +247,7 @@ class MyApp extends StatelessWidget {
                                     syncService: syncService,
                                     activationService: activationService,
                                     backgroundSyncManager: backgroundSyncManager,
+                                    deviceStateManager: deviceStateManager,
                                   )
                                 : LoginScreen(authService: authService))
                           : ActivationScreen(
@@ -264,6 +277,7 @@ class _MainScreenWithSync extends StatefulWidget {
   final SyncService syncService;
   final ActivationService activationService;
   final BackgroundSyncManager backgroundSyncManager;
+  final DeviceStateManager deviceStateManager;
 
   const _MainScreenWithSync({
     required this.database,
@@ -274,6 +288,7 @@ class _MainScreenWithSync extends StatefulWidget {
     required this.syncService,
     required this.activationService,
     required this.backgroundSyncManager,
+    required this.deviceStateManager,
   });
 
   @override
@@ -360,6 +375,7 @@ class _MainScreenWithSyncState extends State<_MainScreenWithSync> with WidgetsBi
       settingsService: widget.settingsService,
       syncService: widget.syncService,
       activationService: widget.activationService,
+      deviceStateManager: widget.deviceStateManager,
     );
   }
 }

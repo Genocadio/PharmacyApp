@@ -2,11 +2,17 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:nexxpharma/data/database.dart';
 import 'package:nexxpharma/data/tables.dart';
+import 'package:nexxpharma/services/auth_service.dart';
 
 class CatalogScreen extends StatefulWidget {
   final AppDatabase database;
+  final AuthService authService;
 
-  const CatalogScreen({super.key, required this.database});
+  const CatalogScreen({
+    super.key,
+    required this.database,
+    required this.authService,
+  });
 
   @override
   State<CatalogScreen> createState() => _CatalogScreenState();
@@ -25,10 +31,19 @@ class _CatalogScreenState extends State<CatalogScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    widget.authService.addListener(_onAuthChanged);
+  }
+
+  void _onAuthChanged() {
+    if (mounted && !widget.authService.isAuthenticated) {
+      // Session expired, return to root (which will show login screen)
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
   }
 
   @override
   void dispose() {
+    widget.authService.removeListener(_onAuthChanged);
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -415,6 +430,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Update activity to keep session alive
+    widget.authService.updateActivity();
+    
     final theme = Theme.of(context);
     final accentColor = theme.colorScheme.primary;
     final showFullBar = _isExpanded || _hasActiveFilters;

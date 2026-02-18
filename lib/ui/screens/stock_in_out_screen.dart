@@ -14,6 +14,7 @@ import 'package:nexxpharma/services/auth_service.dart';
 import 'package:nexxpharma/services/settings_service.dart';
 import 'package:nexxpharma/services/sync_service.dart';
 import 'package:nexxpharma/services/activation_service.dart';
+import 'package:nexxpharma/services/device_state_manager.dart';
 import 'package:nexxpharma/ui/screens/stock_request_screen.dart';
 import 'package:nexxpharma/ui/screens/catalog_screen.dart';
 import 'package:nexxpharma/ui/screens/profile_screen.dart';
@@ -30,6 +31,7 @@ class StockInOutScreen extends StatefulWidget {
   final SettingsService settingsService;
   final SyncService syncService;
   final ActivationService activationService;
+  final DeviceStateManager deviceStateManager;
 
   const StockInOutScreen({
     super.key,
@@ -40,6 +42,7 @@ class StockInOutScreen extends StatefulWidget {
     required this.settingsService,
     required this.syncService,
     required this.activationService,
+    required this.deviceStateManager,
   });
 
   @override
@@ -160,6 +163,9 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
     _loadStockIn();
     _loadStockOuts();
 
+    // Listen for device type, activation status, and other setting changes
+    _setupChangeListeners();
+
     _horizontalHeaderScrollController.addListener(() {
       if (_horizontalHeaderScrollController.offset !=
           _horizontalBodyScrollController.offset) {
@@ -193,6 +199,21 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
         );
       }
     });
+  }
+
+  /// Setup listeners for device configuration changes (type, activation, subtype, etc.)
+  void _setupChangeListeners() {
+    // Listen for device configuration changes (type, activation, subtype, etc.)
+    widget.deviceStateManager.addListener(_onDeviceStateChanged);
+  }
+
+  /// Called when device state changes (type, activation status, module subtype, etc.)
+  void _onDeviceStateChanged() {
+    if (mounted) {
+      setState(() {
+        // Rebuild UI with new device state
+      });
+    }
   }
 
   Future<void> _loadStockOuts() async {
@@ -1682,8 +1703,10 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          CatalogScreen(database: widget.database),
+                      builder: (context) => CatalogScreen(
+                        database: widget.database,
+                        authService: widget.authService,
+                      ),
                     ),
                   );
                   break;
@@ -1706,6 +1729,7 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
                         settingsService: widget.settingsService,
                         syncService: widget.syncService,
                         activationService: widget.activationService,
+                        authService: widget.authService,
                       ),
                     ),
                   );
@@ -2517,6 +2541,9 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
 
   @override
   void dispose() {
+    // Clean up listeners to prevent memory leaks
+    widget.deviceStateManager.removeListener(_onDeviceStateChanged);
+    
     _horizontalHeaderScrollController.dispose();
     _horizontalBodyScrollController.dispose();
     _stockOutHorizontalHeaderScrollController.dispose();

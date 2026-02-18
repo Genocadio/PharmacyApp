@@ -38,10 +38,19 @@ class _StockRequestScreenState extends State<StockRequestScreen>
     _tabController = TabController(length: 4, vsync: this);
     _requestService = StockRequestService(widget.database);
     _loadRequests();
+    widget.authService.addListener(_onAuthChanged);
+  }
+
+  void _onAuthChanged() {
+    if (mounted && !widget.authService.isAuthenticated) {
+      // Session expired, return to root (which will show login screen)
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
   }
 
   @override
   void dispose() {
+    widget.authService.removeListener(_onAuthChanged);
     _tabController.dispose();
     super.dispose();
   }
@@ -71,6 +80,9 @@ class _StockRequestScreenState extends State<StockRequestScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Update activity to keep session alive
+    widget.authService.updateActivity();
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Stock Requests'),

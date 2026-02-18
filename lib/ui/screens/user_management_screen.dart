@@ -29,6 +29,20 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     super.initState();
     _loadUsers();
     _loadDeviceSettings();
+    widget.authService.addListener(_onAuthChanged);
+  }
+
+  void _onAuthChanged() {
+    if (mounted && !widget.authService.isAuthenticated) {
+      // Session expired, return to root (which will show login screen)
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.authService.removeListener(_onAuthChanged);
+    super.dispose();
   }
 
   Future<void> _loadUsers() async {
@@ -601,6 +615,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Update activity to keep session alive
+    widget.authService.updateActivity();
+    
     return Scaffold(
       appBar: AppBar(title: const Text('User Management')),
       body: _isLoading

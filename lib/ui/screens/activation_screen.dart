@@ -48,7 +48,28 @@ class _ActivationScreenState extends State<ActivationScreen> {
     if (kDebugMode) {
       _urlController.text = widget.activationService.settingsService.backendUrl;
     }
+    
+    // Listen for activation status changes (activation, deactivation, module subtype changes)
+    widget.activationService.addListener(_onActivationStatusChanged);
+    widget.activationService.settingsService.addListener(_onSettingsChanged);
+    
     _checkStatus();
+  }
+
+  /// Called when activation status, device status, or module status changes
+  void _onActivationStatusChanged() {
+    if (mounted) {
+      _checkStatus();
+    }
+  }
+
+  /// Called when device type or other settings change
+  void _onSettingsChanged() {
+    if (mounted) {
+      setState(() {
+        // Rebuild UI with new settings
+      });
+    }
   }
 
   Future<void> _checkStatus() async {
@@ -88,6 +109,10 @@ class _ActivationScreenState extends State<ActivationScreen> {
 
   @override
   void dispose() {
+    // Clean up listeners to prevent memory leaks
+    widget.activationService.removeListener(_onActivationStatusChanged);
+    widget.activationService.settingsService.removeListener(_onSettingsChanged);
+    
     _identifierController.dispose();
     _codeController.dispose();
     _urlController.dispose();

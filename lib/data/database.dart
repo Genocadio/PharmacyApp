@@ -20,13 +20,15 @@ part 'database.g.dart';
     StockRequestItems,
     Modules,
     Devices,
+    PaymentMethods,
+    Workers,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration {
@@ -47,6 +49,10 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 10) {
           await m.addColumn(modules, modules.subType);
+        }
+        if (from < 11) {
+          await m.createTable(paymentMethods);
+          await m.createTable(workers);
         }
       },
     );
@@ -1101,6 +1107,41 @@ class AppDatabase extends _$AppDatabase {
     } else {
       await into(modules).insert(companion);
     }
+
+    // Save payment methods if available
+    if (response.paymentMethods.isNotEmpty && response.id != null) {
+      await _savePaymentMethods(response.id!, response.paymentMethods);
+    }
+  }
+
+  /// Save payment methods for a module
+  Future<void> _savePaymentMethods(
+    int moduleId,
+    List<ModulePaymentMethod> pmList,
+  ) async {
+    // Delete existing payment methods for this module
+    await (delete(paymentMethods)
+        ..where((t) => t.moduleId.equals(moduleId)))
+        .go();
+
+    // Insert new payment methods
+    for (final pm in pmList) {
+      await into(paymentMethods).insert(
+        PaymentMethodsCompanion(
+          moduleId: Value(moduleId),
+          account: Value(pm.account),
+          currency: Value(pm.currency),
+          type: Value(pm.type),
+        ),
+      );
+    }
+  }
+
+  /// Get payment methods for a module
+  Future<List<PaymentMethod>> getPaymentMethodsByModule(int moduleId) async {
+    return (select(paymentMethods)
+        ..where((t) => t.moduleId.equals(moduleId)))
+        .get();
   }
 
   /// Get total count of active users
@@ -1197,6 +1238,49 @@ class AppDatabase extends _$AppDatabase {
     await delete(devices).go();
   }
 
+  // ==================== Workers (Synced Users) CRUD ====================
+
+  /// Get all workers for a module
+  Future<List<Worker>> getWorkersByModule(int moduleId) async {
+    return (select(workers)..where((t) => t.moduleId.equals(moduleId))).get();
+  }
+
+  /// Save or update workers synced from server
+  Future<void> saveWorkers(int moduleId, List<WorkerDTO> workerDtoList) async {
+    // Delete existing workers for this module (since we get full list from server)
+    await (delete(workers)..where((t) => t.moduleId.equals(moduleId))).go();
+
+    // Insert new workers
+    for (final worker in workerDtoList) {
+      await into(workers).insert(
+        WorkersCompanion(
+          id: Value(worker.id),
+          moduleId: Value(moduleId),
+          firstName: Value(worker.firstName),
+          lastName: Value(worker.lastName),
+          phone: Value(worker.phone),
+          email: Value(worker.email),
+          role: Value(worker.role),
+          pinHash: Value(worker.pinHash),
+          active: Value(worker.active),
+          version: Value(worker.version),
+          deletedAt: Value(worker.deletedAt),
+        ),
+      );
+    }
+  }
+
+  /// Get a specific worker
+  Future<Worker?> getWorker(String workerId) async {
+    return (select(workers)..where((t) => t.id.equals(workerId)))
+        .getSingleOrNull();
+  }
+
+  /// Clear all workers (for reset)
+  Future<void> clearWorkers() async {
+    await delete(workers).go();
+  }
+
   /// Clear all data (used when registering a new device/fresh start)
   /// Keeps only the module and device records but clears all operational data
   Future<void> clearAllOperationalData() async {
@@ -1210,11 +1294,13 @@ class AppDatabase extends _$AppDatabase {
     await delete(stockOutSales).go();
     await delete(stockRequests).go();
     await delete(stockRequestItems).go();
+    await delete(workers).go();
   }
 
   /// Complete reset - clears everything including module and device
   Future<void> clearAllData() async {
     await clearAllOperationalData();
+    await delete(paymentMethods).go();
     await delete(modules).go();
     await delete(devices).go();
   }

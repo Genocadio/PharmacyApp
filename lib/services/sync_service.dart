@@ -6,6 +6,7 @@ import 'package:crypton/crypton.dart';
 import 'package:nexxpharma/data/database.dart';
 import 'package:nexxpharma/data/tables.dart';
 import 'package:nexxpharma/services/settings_service.dart';
+import 'package:nexxpharma/services/dto/activation_dto.dart';
 
 enum SyncStatus { idle, syncing, success, error }
 
@@ -668,7 +669,6 @@ class SyncService extends ChangeNotifier {
       }
 
       final privateKey = RSAPrivateKey.fromPEM(module!.privateKey!);
-      final publicKey = privateKey.publicKey;
       
       final dataPayload = {'workers': workers};
       final signaturePayload = _buildSignaturePayload(deviceId, dataPayload);
@@ -684,9 +684,6 @@ class SyncService extends ChangeNotifier {
       debugPrint('DeviceId: $deviceId');
       debugPrint('Workers count: ${workers.length}');
       debugPrint('Signature Payload: $signaturePayload');
-      debugPrint('PrivateKey (first 100 chars): ${module.privateKey!.substring(0, 100)}...');
-      debugPrint('PublicKey: ${publicKey.toString()}');
-      debugPrint('Signature: $signature');
 
       final response = await http
           .post(
@@ -700,16 +697,47 @@ class SyncService extends ChangeNotifier {
       debugPrint('Status: ${response.statusCode}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        debugPrint('Workers synced successfully');
-        return true;
+        // Parse the full API response
+        try {
+          final body = json.decode(response.body) as Map<String, dynamic>;
+          final apiResponse = DeviceApiResponse<List<WorkerDTO>>.fromJson(
+            body,
+            parseData: (data) {
+              if (data == null) return [];
+              return (data as List)
+                  .map((w) => WorkerDTO.fromJson(w as Map<String, dynamic>))
+                  .toList();
+            },
+          );
+
+          // Save workers to database
+          if (apiResponse.data != null && apiResponse.data!.isNotEmpty) {
+            await _db.saveWorkers(module.id, apiResponse.data!);
+            debugPrint('✅ Saved ${apiResponse.data!.length} workers to database');
+          }
+
+          // Process any module updates from response
+          if (apiResponse.module != null) {
+            await _db.saveModule(apiResponse.module!);
+            debugPrint('✅ Module information updated');
+          }
+
+          debugPrint('✅ Workers synced successfully');
+          return true;
+        } catch (parseError) {
+          debugPrint('⚠️ Warning parsing response: $parseError');
+          debugPrint('Response body: ${response.body}');
+          // Still return true as workers were sent successfully
+          return true;
+        }
       } else {
         _error = 'Workers sync failed: ${response.statusCode}';
-        debugPrint('Error: ${response.body}');
+        debugPrint('❌ Error: ${response.body}');
         return false;
       }
     } catch (e) {
       _error = 'Workers sync error: $e';
-      debugPrint(_error);
+      debugPrint('❌ Error: $_error');
       return false;
     }
   }
@@ -729,7 +757,6 @@ class SyncService extends ChangeNotifier {
       }
 
       final privateKey = RSAPrivateKey.fromPEM(module!.privateKey!);
-      final publicKey = privateKey.publicKey;
       
       final dataPayload = {'stocksIn': stocksIn, 'stocksOut': stocksOut};
       final signaturePayload = _buildSignaturePayload(deviceId, dataPayload);
@@ -746,10 +773,6 @@ class SyncService extends ChangeNotifier {
       debugPrint('DeviceId: $deviceId');
       debugPrint('StocksIn count: ${stocksIn.length}');
       debugPrint('StocksOut count: ${stocksOut.length}');
-      debugPrint('Signature Payload: $signaturePayload');
-      debugPrint('PrivateKey (first 100 chars): ${module.privateKey!.substring(0, 100)}...');
-      debugPrint('PublicKey: ${publicKey.toString()}');
-      debugPrint('Signature: $signature');
 
       final response = await http
           .post(
@@ -763,16 +786,48 @@ class SyncService extends ChangeNotifier {
       debugPrint('Status: ${response.statusCode}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        debugPrint('Stocks synced successfully');
-        return true;
+        // Parse the full API response
+        try {
+          final body = json.decode(response.body) as Map<String, dynamic>;
+          final apiResponse = DeviceApiResponse<void>.fromJson(body);
+
+          // Process any module updates from response
+          if (apiResponse.module != null) {
+            await _db.saveModule(apiResponse.module!);
+            debugPrint('✅ Module information updated from stocks sync');
+          }
+
+          // Process device status updates
+          if (apiResponse.status != null) {
+            final currentDevice = await _db.getDevice();
+            if (currentDevice != null) {
+              final newStatus = apiResponse.status!.isActive
+                  ? ActivationStatus.ACTIVE
+                  : ActivationStatus.INACTIVE;
+              await _db.updateDeviceLocal(
+                activationStatus: newStatus,
+                supportMultiUsers: apiResponse.status!.supportMultiUsers,
+              );
+              debugPrint('✅ Device status updated from stocks sync');
+            }
+          }
+
+          debugPrint('✅ Stocks synced successfully');
+          return true;
+        } catch (parseError) {
+          debugPrint('⚠️ Warning parsing response: $parseError');
+          debugPrint('Response body: ${response.body}');
+          // Still return true as stocks were sent successfully
+          return true;
+        }
       } else {
         _error = 'Stocks sync failed: ${response.statusCode}';
-        debugPrint('Error: ${response.body}');
+        debugPrint('❌ Error: ${response.body}');
         return false;
       }
     } catch (e) {
       _error = 'Stocks sync error: $e';
-      debugPrint(_error);
+      debugPrint('❌ Error: $_error');
       return false;
     }
   }
@@ -791,7 +846,6 @@ class SyncService extends ChangeNotifier {
       }
 
       final privateKey = RSAPrivateKey.fromPEM(module!.privateKey!);
-      final publicKey = privateKey.publicKey;
       
       final dataPayload = {
         'sales': sales,
@@ -809,10 +863,6 @@ class SyncService extends ChangeNotifier {
       debugPrint('=== Sync Sales Request ===');
       debugPrint('DeviceId: $deviceId');
       debugPrint('Sales count: ${sales.length}');
-      debugPrint('Signature Payload: $signaturePayload');
-      debugPrint('PrivateKey (first 100 chars): ${module.privateKey!.substring(0, 100)}...');
-      debugPrint('PublicKey: ${publicKey.toString()}');
-      debugPrint('Signature: $signature');
 
       final response = await http
           .post(
@@ -826,16 +876,48 @@ class SyncService extends ChangeNotifier {
       debugPrint('Status: ${response.statusCode}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        debugPrint('Sales synced successfully');
-        return true;
+        // Parse the full API response
+        try {
+          final body = json.decode(response.body) as Map<String, dynamic>;
+          final apiResponse = DeviceApiResponse<void>.fromJson(body);
+
+          // Process any module updates from response
+          if (apiResponse.module != null) {
+            await _db.saveModule(apiResponse.module!);
+            debugPrint('✅ Module information updated from sales sync');
+          }
+
+          // Process device status updates
+          if (apiResponse.status != null) {
+            final currentDevice = await _db.getDevice();
+            if (currentDevice != null) {
+              final newStatus = apiResponse.status!.isActive
+                  ? ActivationStatus.ACTIVE
+                  : ActivationStatus.INACTIVE;
+              await _db.updateDeviceLocal(
+                activationStatus: newStatus,
+                supportMultiUsers: apiResponse.status!.supportMultiUsers,
+              );
+              debugPrint('✅ Device status updated from sales sync');
+            }
+          }
+
+          debugPrint('✅ Sales synced successfully');
+          return true;
+        } catch (parseError) {
+          debugPrint('⚠️ Warning parsing response: $parseError');
+          debugPrint('Response body: ${response.body}');
+          // Still return true as sales were sent successfully
+          return true;
+        }
       } else {
         _error = 'Sales sync failed: ${response.statusCode}';
-        debugPrint('Error: ${response.body}');
+        debugPrint('❌ Error: ${response.body}');
         return false;
       }
     } catch (e) {
       _error = 'Sales sync error: $e';
-      debugPrint(_error);
+      debugPrint('❌ Error: $_error');
       return false;
     }
   }

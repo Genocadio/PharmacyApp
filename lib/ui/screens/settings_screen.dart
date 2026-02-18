@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:io' show Platform;
 import 'package:nexxpharma/data/tables.dart';
 import 'package:nexxpharma/services/activation_service.dart';
+import 'package:nexxpharma/services/auth_service.dart';
 import 'package:nexxpharma/services/auto_update_service.dart';
 import 'package:nexxpharma/services/settings_service.dart';
 import 'package:nexxpharma/services/sync_service.dart';
@@ -13,12 +14,14 @@ class SettingsScreen extends StatefulWidget {
   final SettingsService settingsService;
   final SyncService syncService;
   final ActivationService activationService;
+  final AuthService authService;
 
   const SettingsScreen({
     super.key,
     required this.settingsService,
     required this.syncService,
     required this.activationService,
+    required this.authService,
   });
 
   @override
@@ -36,10 +39,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     // Default to Full Sync if never synced
     _isForceFullSync = !widget.settingsService.hasCompletedInitialSync;
+    
+    // Listen for device configuration changes
+    widget.settingsService.addListener(_onSettingsChanged);
+    widget.activationService.addListener(_onActivationChanged);
+    widget.authService.addListener(_onAuthChanged);
+  }
+
+  /// Called when device type, device role, or other settings change
+  void _onSettingsChanged() {
+    if (mounted) {
+      setState(() {
+        // Rebuild UI with new settings
+      });
+    }
+  }
+
+  /// Called when activation status or module subtype changes
+  void _onActivationChanged() {
+    if (mounted) {
+      setState(() {
+        // Rebuild UI with new activation status
+      });
+    }
+  }
+
+  /// Called when authentication state changes (e.g., session expires)
+  void _onAuthChanged() {
+    if (mounted && !widget.authService.isAuthenticated) {
+      // Session expired, return to root (which will show login screen)
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
   }
 
   @override
   void dispose() {
+    // Clean up listeners to prevent memory leaks
+    widget.settingsService.removeListener(_onSettingsChanged);
+    widget.activationService.removeListener(_onActivationChanged);
+    widget.authService.removeListener(_onAuthChanged);
+    
     _backendUrlController.dispose();
     super.dispose();
   }
@@ -109,6 +148,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Update activity when building to keep session alive
+    widget.authService.updateActivity();
+    
     final theme = Theme.of(context);
     final accentColor = theme.colorScheme.primary;
 

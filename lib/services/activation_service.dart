@@ -214,7 +214,7 @@ class ActivationService extends ChangeNotifier {
   }
 
   /// Update device status and heartbeat
-  Future<DeviceApiResponse<void>?> updateDeviceStatus({
+  Future<DeviceApiResponse<DeviceDTO>?> updateDeviceStatus({
     String? lastAction,
   }) async {
     final signedContext = await _getSignedContext();
@@ -271,29 +271,60 @@ class ActivationService extends ChangeNotifier {
 
     debugPrint('=== Device Status Response ===');
     debugPrint('Status: ${response.statusCode}');
+    debugPrint('Response Body: ${response.body}');
+    
     if (response.statusCode != 200 && response.statusCode != 201) {
       debugPrint('Error Body: ${response.body}');
     }
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      final body = json.decode(response.body) as Map<String, dynamic>;
-      final apiResponse = DeviceApiResponse<void>.fromJson(body);
-      await _handleDeviceApiResponse(apiResponse);
-      await _db.updateDeviceLocal(
-        appVersion: appVersion,
-        latitude: position?.latitude,
-        longitude: position?.longitude,
-        lastAction: lastAction,
-      );
-      await _settings.updateLastDeviceStatusAt(DateTime.now());
-      return apiResponse;
+      try {
+        final body = json.decode(response.body) as Map<String, dynamic>;
+        debugPrint('Parsed Body: $body');
+        
+        // Parse response with DeviceDTO to capture all device data changes
+        final apiResponse = DeviceApiResponse<DeviceDTO>.fromJson(
+          body,
+          parseData: (data) {
+            if (data == null) {
+              debugPrint('Warning: Response data is null');
+              return null;
+            }
+            return DeviceDTO.fromJson(data as Map<String, dynamic>);
+          },
+        );
+      
+        debugPrint('=== Device Status Processed ===');
+        debugPrint('Device Type: ${apiResponse.data?.deviceType}');
+        debugPrint('Device Status: ${apiResponse.data?.activationStatus}');
+        debugPrint('Multi-User Support: ${apiResponse.data?.supportMultiUsers}');
+        debugPrint('API Status Response: isActive=${apiResponse.status?.isActive}, '
+            'supportMultiUsers=${apiResponse.status?.supportMultiUsers}');
+        
+        // Handle all device data changes (type, activation, multi-user support, etc)
+        await _handleDeviceApiResponse(apiResponse);
+        
+        // Update local device cache with latest info
+        await _db.updateDeviceLocal(
+          appVersion: appVersion,
+          latitude: position?.latitude,
+          longitude: position?.longitude,
+          lastAction: lastAction,
+        );
+        await _settings.updateLastDeviceStatusAt(DateTime.now());
+        return apiResponse;
+      } catch (e, stackTrace) {
+        debugPrint('❌ Error during status check: $e');
+        debugPrint('Stack trace: $stackTrace');
+        return null;
+      }
     }
 
     return null;
   }
 
   /// Acknowledge a device command
-  Future<DeviceApiResponse<void>?> acknowledgeCommand(int commandId) async {
+  Future<DeviceApiResponse<DeviceDTO>?> acknowledgeCommand(int commandId) async {
     final signedContext = await _getSignedContext();
     if (signedContext == null) return null;
 
@@ -336,10 +367,27 @@ class ActivationService extends ChangeNotifier {
     }
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      final body = json.decode(response.body) as Map<String, dynamic>;
-      final apiResponse = DeviceApiResponse<void>.fromJson(body);
-      await _handleDeviceApiResponse(apiResponse);
-      return apiResponse;
+      try {
+        final body = json.decode(response.body) as Map<String, dynamic>;
+        debugPrint('Response Body: ${response.body}');
+        
+        // Parse response with DeviceDTO to capture any device data changes
+        final apiResponse = DeviceApiResponse<DeviceDTO>.fromJson(
+          body,
+          parseData: (data) {
+            if (data == null) return null;
+            return DeviceDTO.fromJson(data as Map<String, dynamic>);
+          },
+        );
+        
+        // Process any device updates returned by server
+        await _handleDeviceApiResponse(apiResponse);
+        return apiResponse;
+      } catch (e, stackTrace) {
+        debugPrint('❌ Error parsing acknowledge command response: $e');
+        debugPrint('Stack trace: $stackTrace');
+        return null;
+      }
     }
 
     return null;
@@ -510,7 +558,7 @@ class ActivationService extends ChangeNotifier {
     }
   }
 
-  Future<DeviceApiResponse<void>?> _rotatePublicKey() async {
+  Future<DeviceApiResponse<DeviceDTO>?> _rotatePublicKey() async {
     final signedContext = await _getSignedContext();
     if (signedContext == null) return null;
 
@@ -560,13 +608,30 @@ class ActivationService extends ChangeNotifier {
     }
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      final body = json.decode(response.body) as Map<String, dynamic>;
-      final apiResponse = DeviceApiResponse<void>.fromJson(body);
-      await _handleDeviceApiResponse(
-        apiResponse,
-        privateKeyOverride: newPrivateKey.toString(),
-      );
-      return apiResponse;
+      try {
+        final body = json.decode(response.body) as Map<String, dynamic>;
+        debugPrint('Response Body: ${response.body}');
+        
+        // Parse response with DeviceDTO to capture any device data changes
+        final apiResponse = DeviceApiResponse<DeviceDTO>.fromJson(
+          body,
+          parseData: (data) {
+            if (data == null) return null;
+            return DeviceDTO.fromJson(data as Map<String, dynamic>);
+          },
+        );
+        
+        // Process any device updates returned by server
+        await _handleDeviceApiResponse(
+          apiResponse,
+          privateKeyOverride: newPrivateKey.toString(),
+        );
+        return apiResponse;
+      } catch (e, stackTrace) {
+        debugPrint('❌ Error parsing public key rotation response: $e');
+        debugPrint('Stack trace: $stackTrace');
+        return null;
+      }
     }
 
     return null;
@@ -638,6 +703,26 @@ class ActivationService extends ChangeNotifier {
       await _db.saveModule(response.module!, privateKey: privateKeyOverride);
       await _applyModuleSubtype(response.module!.subType);
       shouldNotify = true;
+      
+      // Log module information
+      debugPrint('=== Module Data Updated ===');
+      debugPrint('Module Name: ${response.module!.name}');
+      debugPrint('Module Code: ${response.module!.moduleCode}');
+      debugPrint('Service Type: ${response.module!.serviceType}');
+      debugPrint('Sub Type: ${response.module!.subType}');
+      debugPrint('Activation Status: ${response.module!.activationStatus}');
+      debugPrint('Subscription Tier: ${response.module!.subscriptionTier}');
+      if (response.module!.expirationDate != null) {
+        debugPrint('Expires: ${response.module!.expirationDate}');
+      }
+      
+      // Log payment methods
+      if (response.module!.paymentMethods.isNotEmpty) {
+        debugPrint('💳 Payment Methods (${response.module!.paymentMethods.length}):');
+        for (final pm in response.module!.paymentMethods) {
+          debugPrint('  - ${pm.type}: ${pm.account} (${pm.currency ?? 'N/A'})');
+        }
+      }
       
       // Check for expiration warning (15 days or less)
       await _checkExpirationWarning(response.module!);
@@ -719,9 +804,16 @@ class ActivationService extends ChangeNotifier {
       }
     }
 
-    // Process commands (placeholder for future implementation)
+    // Process commands
     if (response.commands.isNotEmpty) {
-      debugPrint('📋 Received ${response.commands.length} commands');
+      debugPrint('📋 Received ${response.commands.length} command(s):');
+      for (final cmd in response.commands) {
+        debugPrint('  - [${cmd.id}] ${cmd.type} (${cmd.status})');
+        debugPrint('    Created: ${cmd.createdAt}');
+        if (cmd.deliveredAt != null) {
+          debugPrint('    Delivered: ${cmd.deliveredAt}');
+        }
+      }
       // TODO: Process commands when command handling is implemented
     }
 
