@@ -21,6 +21,7 @@ import 'package:nexxpharma/ui/screens/profile_screen.dart';
 import 'package:nexxpharma/ui/screens/settings_screen.dart';
 import 'package:nexxpharma/ui/screens/user_management_screen.dart';
 import 'package:nexxpharma/ui/widgets/toast.dart';
+import 'dart:typed_data';
 import 'dart:ui';
 
 class StockInOutScreen extends StatefulWidget {
@@ -71,6 +72,44 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
     final focusContext = focus?.context;
     if (focusContext == null) return false;
     return focusContext.widget is EditableText;
+  }
+
+  Future<ModuleInfo?> _loadModuleInfo() async {
+    final moduleData = await widget.database.getModule();
+    if (moduleData == null) return null;
+
+    final paymentMethods =
+        await widget.database.getPaymentMethodsByModule(moduleData.id);
+
+    return ModuleInfo(
+      name: moduleData.name,
+      phone: moduleData.phone,
+      email: moduleData.email,
+      province: moduleData.province,
+      district: moduleData.district,
+      sector: moduleData.sector,
+      logoUrl: moduleData.logoUrl,
+      paymentMethods: paymentMethods
+          .map(
+            (method) => ModulePaymentMethodInfo(
+              type: method.type,
+              account: method.account,
+              currency: method.currency,
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Future<Uint8List> _buildInvoicePdf(StockOutDTO stockOut) async {
+    final moduleInfo = await _loadModuleInfo();
+    return InvoiceService.generateInvoice(
+      stockOut,
+      widget.settingsService.invoicePaperSize,
+      moduleInfo: moduleInfo,
+      isWholesale:
+          widget.settingsService.deviceType == DeviceType.PHARMACY_WHOLESALE,
+    );
   }
 
   /// Check if the device supports multi-user mode
@@ -1196,41 +1235,49 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
         // Invoice column (only for non-clinic modes)
         if (!isClinic)
           DataCell(
-            IconButton(
-              icon: const Icon(Icons.description_outlined),
-              tooltip: 'View Invoice',
-              onPressed: () async {
-                // Fetch module info for invoice
-                final moduleData = await widget.database.getModule();
-                if (mounted) {
-                  showDialog(
-                    context: context,
-                    builder: (context) => Dialog(
-                      insetPadding: const EdgeInsets.all(20),
-                      child: PdfPreview(
-                        build: (format) => InvoiceService.generateInvoice(
-                          stockOut,
-                          widget.settingsService.invoicePaperSize,
-                          moduleInfo: moduleData != null
-                              ? ModuleInfo(
-                                  name: moduleData.name,
-                                  phone: moduleData.phone,
-                                  email: moduleData.email,
-                                  logoUrl: moduleData.logoUrl,
-                                )
-                              : null,
-                          isWholesale: widget.settingsService.deviceType ==
-                              DeviceType.PHARMACY_WHOLESALE,
-                        ),
-                        canChangePageFormat: false,
-                        canChangeOrientation: false,
-                        canDebug: false,
-                        actions: const [],
-                      ),
-                    ),
-                  );
-                }
-              },
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.description_outlined),
+                  tooltip: 'View Invoice',
+                  onPressed: () async {
+                    final pdfFuture = _buildInvoicePdf(stockOut);
+                    if (mounted) {
+                      showDialog(
+                        context: context,
+                        builder: (context) {
+                          final size = MediaQuery.sizeOf(context);
+                          return Dialog(
+                            insetPadding: const EdgeInsets.all(20),
+                            child: SizedBox(
+                              width: size.width * 0.9,
+                              height: size.height * 0.85,
+                              child: PdfPreview(
+                                build: (format) => pdfFuture,
+                                canChangePageFormat: false,
+                                canChangeOrientation: false,
+                                canDebug: false,
+                                actions: const [],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    }
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.print_outlined),
+                  tooltip: 'Print Invoice',
+                  onPressed: () async {
+                    final pdfBytes = await _buildInvoicePdf(stockOut);
+                    await Printing.layoutPdf(
+                      onLayout: (format) async => pdfBytes,
+                    );
+                  },
+                ),
+              ],
             ),
           ),
       ],

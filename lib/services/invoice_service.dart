@@ -11,13 +11,33 @@ class ModuleInfo {
   final String? name;
   final String? phone;
   final String? email;
+  final String? province;
+  final String? district;
+  final String? sector;
   final String? logoUrl;
+  final List<ModulePaymentMethodInfo>? paymentMethods;
 
   ModuleInfo({
     this.name,
     this.phone,
     this.email,
+    this.province,
+    this.district,
+    this.sector,
     this.logoUrl,
+    this.paymentMethods,
+  });
+}
+
+class ModulePaymentMethodInfo {
+  final String type;
+  final String account;
+  final String? currency;
+
+  ModulePaymentMethodInfo({
+    required this.type,
+    required this.account,
+    this.currency,
   });
 }
 
@@ -63,6 +83,18 @@ class InvoiceService {
       decimalDigits: 0,
     );
 
+    final addressParts = <String>[];
+    if (moduleInfo?.province != null && moduleInfo!.province!.isNotEmpty) {
+      addressParts.add(moduleInfo.province!);
+    }
+    if (moduleInfo?.district != null && moduleInfo!.district!.isNotEmpty) {
+      addressParts.add(moduleInfo.district!);
+    }
+    if (moduleInfo?.sector != null && moduleInfo!.sector!.isNotEmpty) {
+      addressParts.add(moduleInfo.sector!);
+    }
+    final addressLine = addressParts.isNotEmpty ? addressParts.join(', ') : null;
+
     // Load logo if available
     pw.ImageProvider? logoImage;
     if (moduleInfo?.logoUrl != null &&
@@ -103,7 +135,8 @@ class InvoiceService {
                             ),
                           ),
                         if (moduleInfo?.phone != null ||
-                            moduleInfo?.email != null) ...[
+                            moduleInfo?.email != null ||
+                            addressLine != null) ...[
                           pw.SizedBox(height: 4),
                           if (moduleInfo!.phone != null)
                             pw.Text(
@@ -113,6 +146,11 @@ class InvoiceService {
                           if (moduleInfo.email != null)
                             pw.Text(
                               'Email: ${moduleInfo.email}',
+                              style: const pw.TextStyle(fontSize: 10),
+                            ),
+                          if (addressLine != null)
+                            pw.Text(
+                              'Address: $addressLine',
                               style: const pw.TextStyle(fontSize: 10),
                             ),
                         ],
@@ -272,6 +310,28 @@ class InvoiceService {
                 ],
               ),
 
+              if (moduleInfo?.paymentMethods?.isNotEmpty ?? false) ...[
+                pw.SizedBox(height: 16),
+                pw.Text(
+                  'Payment Methods:',
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 11,
+                  ),
+                ),
+                pw.SizedBox(height: 6),
+                ...moduleInfo!.paymentMethods!.map((method) {
+                  final currency =
+                      method.currency != null && method.currency!.isNotEmpty
+                          ? ' (${method.currency})'
+                          : '';
+                  return pw.Text(
+                    '${method.type}: ${method.account}$currency',
+                    style: const pw.TextStyle(fontSize: 10),
+                  );
+                }).toList(),
+              ],
+
               pw.Spacer(),
               pw.Divider(),
               pw.Center(
@@ -304,6 +364,18 @@ class InvoiceService {
       symbol: 'RF ',
       decimalDigits: 0,
     );
+
+    final addressParts = <String>[];
+    if (moduleInfo?.province != null && moduleInfo!.province!.isNotEmpty) {
+      addressParts.add(moduleInfo.province!);
+    }
+    if (moduleInfo?.district != null && moduleInfo!.district!.isNotEmpty) {
+      addressParts.add(moduleInfo.district!);
+    }
+    if (moduleInfo?.sector != null && moduleInfo!.sector!.isNotEmpty) {
+      addressParts.add(moduleInfo.sector!);
+    }
+    final addressLine = addressParts.isNotEmpty ? addressParts.join(', ') : null;
 
     // Load logo if available for receipt
     pw.ImageProvider? logoImage;
@@ -348,7 +420,9 @@ class InvoiceService {
                   ),
                 ),
               if (moduleInfo?.name != null) pw.SizedBox(height: 2),
-              if (moduleInfo?.phone != null || moduleInfo?.email != null) ...[
+              if (moduleInfo?.phone != null ||
+                  moduleInfo?.email != null ||
+                  addressLine != null) ...[
                 if (moduleInfo!.phone != null)
                   pw.Center(
                     child: pw.Text(
@@ -361,6 +435,14 @@ class InvoiceService {
                   pw.Center(
                     child: pw.Text(
                       moduleInfo.email!,
+                      style: const pw.TextStyle(fontSize: 7),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                if (addressLine != null)
+                  pw.Center(
+                    child: pw.Text(
+                      addressLine,
                       style: const pw.TextStyle(fontSize: 7),
                       textAlign: pw.TextAlign.center,
                     ),
@@ -532,6 +614,27 @@ class InvoiceService {
               ),
 
               pw.SizedBox(height: 12),
+              if (moduleInfo?.paymentMethods?.isNotEmpty ?? false) ...[
+                pw.Text(
+                  'Payment Methods',
+                  style: pw.TextStyle(
+                    fontSize: 8,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.SizedBox(height: 4),
+                ...moduleInfo!.paymentMethods!.map((method) {
+                  final currency =
+                      method.currency != null && method.currency!.isNotEmpty
+                          ? ' (${method.currency})'
+                          : '';
+                  return pw.Text(
+                    '${method.type}: ${method.account}$currency',
+                    style: const pw.TextStyle(fontSize: 7),
+                  );
+                }).toList(),
+                pw.SizedBox(height: 8),
+              ],
               pw.Divider(),
               pw.SizedBox(height: 4),
               pw.Center(
