@@ -26,19 +26,36 @@ class InvoiceService {
     StockOutDTO stockOut,
     InvoicePaperSize paperSize, {
     ModuleInfo? moduleInfo,
+    bool isWholesale = false,
   }) async {
     switch (paperSize) {
       case InvoicePaperSize.a4:
-        return _generateA4Invoice(stockOut, moduleInfo);
+        return _generateA4Invoice(stockOut, moduleInfo, isWholesale: isWholesale);
       case InvoicePaperSize.mm80:
-        return _generateReceiptInvoice(stockOut, PdfPageFormat.roll80, moduleInfo);
+        return _generateReceiptInvoice(
+          stockOut,
+          PdfPageFormat.roll80,
+          moduleInfo,
+          isWholesale: isWholesale,
+        );
       case InvoicePaperSize.mm57:
-        return _generateReceiptInvoice(stockOut, PdfPageFormat.roll57, moduleInfo);
+        return _generateReceiptInvoice(
+          stockOut,
+          PdfPageFormat.roll57,
+          moduleInfo,
+          isWholesale: isWholesale,
+        );
     }
   }
 
-  static Future<Uint8List> _generateA4Invoice(StockOutDTO stockOut, ModuleInfo? moduleInfo) async {
+  static Future<Uint8List> _generateA4Invoice(
+    StockOutDTO stockOut,
+    ModuleInfo? moduleInfo, {
+    bool isWholesale = false,
+  }) async {
     final pdf = pw.Document();
+    final customerLabel = isWholesale ? 'Pharmacy' : 'Patient';
+    final payerLabel = isWholesale ? 'Customer Pays:' : 'Patient Pays:';
 
     final dateFormat = DateFormat('MMM dd, yyyy HH:mm');
     final currencyFormat = NumberFormat.currency(
@@ -146,7 +163,7 @@ class InvoiceService {
                       style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                     ),
                     pw.SizedBox(height: 5),
-                    pw.Text('Patient: ${stockOut.patientName}'),
+                    pw.Text('$customerLabel: ${stockOut.patientName}'),
                     if (stockOut.insuranceCardNumber != null) ...[
                       pw.Text('Insurance Card: ${stockOut.insuranceCardNumber}'),
                       if (stockOut.issuingCompany != null)
@@ -229,7 +246,7 @@ class InvoiceService {
                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
                             pw.Text(
-                              'Patient Pays:',
+                              payerLabel,
                               style: pw.TextStyle(
                                 fontWeight: pw.FontWeight.bold,
                                 fontSize: 16,
@@ -275,9 +292,12 @@ class InvoiceService {
   static Future<Uint8List> _generateReceiptInvoice(
     StockOutDTO stockOut,
     PdfPageFormat pageFormat,
-    ModuleInfo? moduleInfo,
+    ModuleInfo? moduleInfo, {
+    bool isWholesale = false,
+  }
   ) async {
     final pdf = pw.Document();
+    final customerLabel = isWholesale ? 'Pharmacy' : 'Patient';
 
     final dateFormat = DateFormat('dd/MM/yy HH:mm');
     final currencyFormat = NumberFormat.currency(
@@ -374,7 +394,7 @@ class InvoiceService {
 
               // Patient Info
               pw.Text(
-                'Patient: ${stockOut.patientName}',
+                '$customerLabel: ${stockOut.patientName}',
                 style: pw.TextStyle(
                   fontSize: 9,
                   fontWeight: pw.FontWeight.bold,

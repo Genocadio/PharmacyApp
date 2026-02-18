@@ -15,12 +15,16 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _identifierFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
   bool _obscurePassword = true;
 
   @override
   void dispose() {
     _identifierController.dispose();
     _passwordController.dispose();
+    _identifierFocusNode.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
@@ -98,6 +102,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 48),
                       TextFormField(
                         controller: _identifierController,
+                        focusNode: _identifierFocusNode,
+                        textInputAction: TextInputAction.next,
                         decoration: InputDecoration(
                           labelText: 'Email or Phone',
                           border: OutlineInputBorder(
@@ -109,6 +115,11 @@ class _LoginScreenState extends State<LoginScreen> {
                               ? Colors.grey.shade50
                               : Colors.white.withOpacity(0.05),
                         ),
+                        onFieldSubmitted: (_) {
+                          FocusScope.of(context).requestFocus(
+                            _passwordFocusNode,
+                          );
+                        },
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your email or phone';
@@ -120,6 +131,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
+                        focusNode: _passwordFocusNode,
+                        textInputAction: TextInputAction.done,
                         decoration: InputDecoration(
                           labelText: 'Password',
                           border: OutlineInputBorder(
@@ -143,6 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ? Colors.grey.shade50
                               : Colors.white.withOpacity(0.05),
                         ),
+                        onFieldSubmitted: (_) => _handleLogin(),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your password';

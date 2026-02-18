@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:io' show Platform;
+import 'dart:io';
 import 'package:nexxpharma/data/database.dart';
 import 'package:nexxpharma/services/auth_service.dart';
 import 'package:nexxpharma/services/auto_update_service.dart';
@@ -31,6 +31,11 @@ void main() async {
     }
     return stack;
   };
+
+  final hasInstanceLock = await _acquireSingleInstanceLock();
+  if (!hasInstanceLock) {
+    exit(0);
+  }
 
   final database = AppDatabase();
   final prefs = await SharedPreferences.getInstance();
@@ -91,6 +96,24 @@ void main() async {
       backgroundSyncManager: backgroundSyncManager,
     ),
   );
+}
+
+RandomAccessFile? _instanceLockFile;
+
+Future<bool> _acquireSingleInstanceLock() async {
+  if (!(Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+    return true;
+  }
+
+  final lockFile = File('${Directory.systemTemp.path}/nexxpharma.lock');
+  try {
+    final raf = await lockFile.open(mode: FileMode.write);
+    await raf.lock(FileLock.exclusive);
+    _instanceLockFile = raf;
+    return true;
+  } on FileSystemException {
+    return false;
+  }
 }
 
 class MyApp extends StatelessWidget {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:nexxpharma/data/database.dart';
 import 'package:nexxpharma/data/tables.dart';
@@ -61,6 +62,24 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
   final TextEditingController _stockOutSearchController =
       TextEditingController();
   String _stockOutSearchQuery = '';
+
+  bool _isTextInputFocused() {
+    final focus = FocusManager.instance.primaryFocus;
+    final focusContext = focus?.context;
+    if (focusContext == null) return false;
+    return focusContext.widget is EditableText;
+  }
+
+  /// Check if the device supports multi-user mode
+  Future<bool> _checkMultiUserSupport() async {
+    try {
+      final device = await widget.database.getDevice();
+      return device?.supportMultiUsers ?? false;
+    } catch (e) {
+      debugPrint('Error checking multi-user support: $e');
+      return false;
+    }
+  }
 
   Future<void> _loadStockIn() async {
     setState(() => _isLoading = true);
@@ -274,65 +293,95 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
       onPanUpdate: (_) => widget.authService.updateActivity(),
       child: DefaultTabController(
         length: 2,
-        child: Scaffold(
-          body: SafeArea(
-            child: Column(
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    color: theme.brightness == Brightness.light
-                        ? theme.scaffoldBackgroundColor
-                        : theme.cardColor,
-                    border: Border(
-                      bottom: BorderSide(
-                        color: theme.dividerColor.withOpacity(0.1),
-                      ),
-                    ),
-                  ),
-                  child: TabBar(
-                    indicator: UnderlineTabIndicator(
-                      borderSide: BorderSide(
-                        color: accentColor,
-                        width: 3,
-                      ),
-                    ),
-                    labelColor: accentColor,
-                    unselectedLabelColor: theme.brightness == Brightness.light
-                        ? Colors.grey.shade600
-                        : Colors.grey.shade400,
-                    tabs: [
-                      Tab(
-                        text: 'Stock In',
-                        icon: Padding(
-                          padding: EdgeInsets.only(bottom: 4),
-                          child: Icon(Icons.inventory_2, size: 20),
-                        ),
-                      ),
-                      Tab(
-                        text: 'Stock Out',
-                        icon: Padding(
-                          padding: EdgeInsets.only(bottom: 4),
-                          child: Icon(Icons.receipt_long, size: 20),
-                        ),
-                      ),
-                    ],
-                    labelPadding: const EdgeInsets.symmetric(horizontal: 16),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: TabBarView(
+        child: Builder(
+          builder: (context) {
+            final tabController = DefaultTabController.of(context);
+            return Focus(
+              autofocus: true,
+              onKeyEvent: (node, event) {
+                if (_isTextInputFocused()) {
+                  return KeyEventResult.ignored;
+                }
+                if (event.logicalKey == LogicalKeyboardKey.arrowLeft &&
+                    event is KeyDownEvent) {
+                  final nextIndex = (tabController.index) - 1;
+                  if (nextIndex >= 0) {
+                    tabController.animateTo(nextIndex);
+                    return KeyEventResult.handled;
+                  }
+                }
+                if (event.logicalKey == LogicalKeyboardKey.arrowRight &&
+                    event is KeyDownEvent) {
+                  final nextIndex = (tabController.index) + 1;
+                  if (nextIndex <= 1) {
+                    tabController.animateTo(nextIndex);
+                    return KeyEventResult.handled;
+                  }
+                }
+                return KeyEventResult.ignored;
+              },
+              child: Scaffold(
+                body: SafeArea(
+                  child: Column(
                     children: [
-                      _buildStockInTab(theme, accentColor),
-                      _buildStockOutTab(theme, accentColor),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: theme.brightness == Brightness.light
+                              ? theme.scaffoldBackgroundColor
+                              : theme.cardColor,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: theme.dividerColor.withOpacity(0.1),
+                            ),
+                          ),
+                        ),
+                        child: TabBar(
+                          indicator: UnderlineTabIndicator(
+                            borderSide: BorderSide(
+                              color: accentColor,
+                              width: 3,
+                            ),
+                          ),
+                          labelColor: accentColor,
+                          unselectedLabelColor: theme.brightness == Brightness.light
+                              ? Colors.grey.shade600
+                              : Colors.grey.shade400,
+                          tabs: [
+                            Tab(
+                              text: 'Stock In',
+                              icon: Padding(
+                                padding: EdgeInsets.only(bottom: 4),
+                                child: Icon(Icons.inventory_2, size: 20),
+                              ),
+                            ),
+                            Tab(
+                              text: 'Stock Out',
+                              icon: Padding(
+                                padding: EdgeInsets.only(bottom: 4),
+                                child: Icon(Icons.receipt_long, size: 20),
+                              ),
+                            ),
+                          ],
+                          labelPadding: const EdgeInsets.symmetric(horizontal: 16),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: TabBarView(
+                          children: [
+                            _buildStockInTab(theme, accentColor),
+                            _buildStockOutTab(theme, accentColor),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-          floatingActionButton: _buildMacDock(theme, accentColor),
+                floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+                floatingActionButton: _buildMacDock(theme, accentColor),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -1149,6 +1198,8 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
                                   logoUrl: moduleData.logoUrl,
                                 )
                               : null,
+                          isWholesale: widget.settingsService.deviceType ==
+                              DeviceType.PHARMACY_WHOLESALE,
                         ),
                         canChangePageFormat: false,
                         canChangeOrientation: false,
@@ -1553,152 +1604,158 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
 
     return Material(
       color: Colors.transparent,
-      child: PopupMenuButton<String>(
-        offset: const Offset(0, -200),
-        tooltip: 'User Menu',
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-          PopupMenuItem<String>(
-            value: 'catalog',
-            child: Row(
-              children: [
-                Icon(Icons.menu_book, color: accentColor, size: 20),
-                const SizedBox(width: 12),
-                const Text('Product Catalog'),
-              ],
-            ),
-          ),
-          PopupMenuItem<String>(
-            value: 'stock_requests',
-            child: Row(
-              children: [
-                Icon(Icons.inventory, color: accentColor, size: 20),
-                const SizedBox(width: 12),
-                const Text('Stock Requests'),
-              ],
-            ),
-          ),
-          PopupMenuItem<String>(
-            value: 'settings',
-            child: Row(
-              children: [
-                Icon(Icons.settings, color: accentColor, size: 20),
-                const SizedBox(width: 12),
-                const Text('Settings'),
-              ],
-            ),
-          ),
-          if (user?.role == UserRole.Manager)
-            PopupMenuItem<String>(
-              value: 'user_management',
-              child: Row(
-                children: [
-                  Icon(Icons.people_outline, color: accentColor, size: 20),
-                  const SizedBox(width: 12),
-                  const Text('User Management'),
-                ],
+      child: FutureBuilder<bool>(
+        future: _checkMultiUserSupport(),
+        builder: (context, supportSnapshot) {
+          final supportsMultiUser = supportSnapshot.data ?? false;
+          return PopupMenuButton<String>(
+            offset: const Offset(0, -200),
+            tooltip: 'User Menu',
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              PopupMenuItem<String>(
+                value: 'catalog',
+                child: Row(
+                  children: [
+                    Icon(Icons.menu_book, color: accentColor, size: 20),
+                    const SizedBox(width: 12),
+                    const Text('Product Catalog'),
+                  ],
+                ),
               ),
-            ),
-          const PopupMenuDivider(),
-          PopupMenuItem<String>(
-            value: 'profile',
-            child: Row(
-              children: [
-                Icon(Icons.person, color: accentColor, size: 20),
-                const SizedBox(width: 12),
-                const Text('Profile'),
-              ],
-            ),
-          ),
-          PopupMenuItem<String>(
-            value: 'logout',
-            child: Row(
-              children: [
-                Icon(Icons.logout, color: Colors.red, size: 20),
-                const SizedBox(width: 12),
-                const Text('Logout', style: TextStyle(color: Colors.red)),
-              ],
-            ),
-          ),
-        ],
-        onSelected: (String value) async {
-          switch (value) {
-            case 'catalog':
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      CatalogScreen(database: widget.database),
+              PopupMenuItem<String>(
+                value: 'stock_requests',
+                child: Row(
+                  children: [
+                    Icon(Icons.inventory, color: accentColor, size: 20),
+                    const SizedBox(width: 12),
+                    const Text('Stock Requests'),
+                  ],
                 ),
-              );
-              break;
-            case 'stock_requests':
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => StockRequestScreen(
-                    database: widget.database,
-                    authService: widget.authService,
+              ),
+              PopupMenuItem<String>(
+                value: 'settings',
+                child: Row(
+                  children: [
+                    Icon(Icons.settings, color: accentColor, size: 20),
+                    const SizedBox(width: 12),
+                    const Text('Settings'),
+                  ],
+                ),
+              ),
+              if (supportsMultiUser && user?.role == UserRole.Manager)
+                PopupMenuItem<String>(
+                  value: 'user_management',
+                  child: Row(
+                    children: [
+                      Icon(Icons.people_outline, color: accentColor, size: 20),
+                      const SizedBox(width: 12),
+                      const Text('User Management'),
+                    ],
                   ),
                 ),
-              );
-              break;
-            case 'settings':
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SettingsScreen(
-                    settingsService: widget.settingsService,
-                    syncService: widget.syncService,
-                    activationService: widget.activationService,
-                  ),
+              const PopupMenuDivider(),
+              PopupMenuItem<String>(
+                value: 'profile',
+                child: Row(
+                  children: [
+                    Icon(Icons.person, color: accentColor, size: 20),
+                    const SizedBox(width: 12),
+                    const Text('Profile'),
+                  ],
                 ),
-              );
-              break;
-            case 'user_management':
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => UserManagementScreen(
-                    authService: widget.authService,
-                    database: widget.database,
-                  ),
-                ),
-              );
-              break;
-            case 'profile':
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      ProfileScreen(authService: widget.authService),
-                ),
-              );
-              break;
-            case 'logout':
-              await widget.authService.logout();
-              break;
-          }
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: accentColor,
-                foregroundColor: theme.colorScheme.onPrimary,
-                child: Text(
-                  initials,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
+              ),
+              PopupMenuItem<String>(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, color: Colors.red, size: 20),
+                    const SizedBox(width: 12),
+                    const Text('Logout', style: TextStyle(color: Colors.red)),
+                  ],
                 ),
               ),
             ],
-          ),
-        ),
+            onSelected: (String value) async {
+              switch (value) {
+                case 'catalog':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          CatalogScreen(database: widget.database),
+                    ),
+                  );
+                  break;
+                case 'stock_requests':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => StockRequestScreen(
+                        database: widget.database,
+                        authService: widget.authService,
+                      ),
+                    ),
+                  );
+                  break;
+                case 'settings':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SettingsScreen(
+                        settingsService: widget.settingsService,
+                        syncService: widget.syncService,
+                        activationService: widget.activationService,
+                      ),
+                    ),
+                  );
+                  break;
+                case 'user_management':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => UserManagementScreen(
+                        authService: widget.authService,
+                        database: widget.database,
+                      ),
+                    ),
+                  );
+                  break;
+                case 'profile':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          ProfileScreen(authService: widget.authService),
+                    ),
+                  );
+                  break;
+                case 'logout':
+                  await widget.authService.logout();
+                  break;
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundColor: accentColor,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    child: Text(
+                      initials,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -2536,6 +2593,42 @@ class _SortableHeaderCell extends StatelessWidget {
   }
 }
 
+class _ArrowKeyTraversal extends StatelessWidget {
+  final Widget child;
+
+  const _ArrowKeyTraversal({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return FocusTraversalGroup(
+      policy: WidgetOrderTraversalPolicy(),
+      child: Shortcuts(
+        shortcuts: <LogicalKeySet, Intent>{
+          LogicalKeySet(LogicalKeyboardKey.arrowDown): NextFocusIntent(),
+          LogicalKeySet(LogicalKeyboardKey.arrowUp): PreviousFocusIntent(),
+        },
+        child: Actions(
+          actions: <Type, Action<Intent>>{
+            NextFocusIntent: CallbackAction<NextFocusIntent>(
+              onInvoke: (intent) {
+                FocusScope.of(context).nextFocus();
+                return null;
+              },
+            ),
+            PreviousFocusIntent: CallbackAction<PreviousFocusIntent>(
+              onInvoke: (intent) {
+                FocusScope.of(context).previousFocus();
+                return null;
+              },
+            ),
+          },
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
 class _AddStockFlow extends StatefulWidget {
   final AppDatabase database;
   final StockInService stockService;
@@ -2657,29 +2750,31 @@ class _AddStockFlowState extends State<_AddStockFlow> {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Material(
-        color: Colors.transparent,
-        child: Container(
-          width: 600,
-          constraints: const BoxConstraints(maxHeight: 700),
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 400),
-            transitionBuilder: (Widget child, Animation<double> animation) {
-              return FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
-                  position: animation.drive(
-                    Tween(
-                      begin: const Offset(0, 0.1),
-                      end: Offset.zero,
-                    ).chain(CurveTween(curve: Curves.easeOutQuad)),
+    return _ArrowKeyTraversal(
+      child: Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: 600,
+            constraints: const BoxConstraints(maxHeight: 700),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 400),
+              transitionBuilder: (Widget child, Animation<double> animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: animation.drive(
+                      Tween(
+                        begin: const Offset(0, 0.1),
+                        end: Offset.zero,
+                      ).chain(CurveTween(curve: Curves.easeOutQuad)),
+                    ),
+                    child: child,
                   ),
-                  child: child,
-                ),
-              );
-            },
-            child: _step == 1 ? _buildStep1() : _buildStep2(),
+                );
+              },
+              child: _step == 1 ? _buildStep1() : _buildStep2(),
+            ),
           ),
         ),
       ),
@@ -3012,11 +3107,14 @@ class _AddStockFlowState extends State<_AddStockFlow> {
                             child: TextFormField(
                               controller: _quantityController,
                               autofocus: true,
+                              textInputAction: TextInputAction.next,
                               decoration: const InputDecoration(
                                 labelText: 'Quantity',
                                 border: OutlineInputBorder(),
                               ),
                               keyboardType: TextInputType.number,
+                              onFieldSubmitted: (_) =>
+                                  FocusScope.of(context).nextFocus(),
                               validator: (v) =>
                                   (v == null || int.tryParse(v) == null)
                                   ? 'Invalid'
@@ -3030,6 +3128,7 @@ class _AddStockFlowState extends State<_AddStockFlow> {
                             Expanded(
                               child: TextFormField(
                                 controller: _priceController,
+                                textInputAction: TextInputAction.next,
                                 decoration: const InputDecoration(
                                   labelText: 'Price per Unit',
                                   prefixText: 'RF ',
@@ -3039,6 +3138,8 @@ class _AddStockFlowState extends State<_AddStockFlow> {
                                     const TextInputType.numberWithOptions(
                                       decimal: true,
                                     ),
+                                onFieldSubmitted: (_) =>
+                                    FocusScope.of(context).nextFocus(),
                                 validator: (v) =>
                                     (v == null || double.tryParse(v) == null)
                                     ? 'Invalid'
@@ -3053,10 +3154,13 @@ class _AddStockFlowState extends State<_AddStockFlow> {
                           Expanded(
                             child: TextFormField(
                               controller: _batchController,
+                              textInputAction: TextInputAction.next,
                               decoration: const InputDecoration(
                                 labelText: 'Batch Number',
                                 border: OutlineInputBorder(),
                               ),
+                              onFieldSubmitted: (_) =>
+                                  FocusScope.of(context).nextFocus(),
                             ),
                           ),
                         ],
@@ -3220,21 +3324,30 @@ class _AddStockFlowState extends State<_AddStockFlow> {
                           Expanded(
                             child: TextFormField(
                               controller: _locationController,
+                              textInputAction: TextInputAction.next,
                               decoration: const InputDecoration(
                                 labelText: 'Location',
                                 border: OutlineInputBorder(),
                               ),
+                              onFieldSubmitted: (_) =>
+                                  FocusScope.of(context).nextFocus(),
                             ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
                             child: TextFormField(
                               controller: _reorderController,
+                              textInputAction: TextInputAction.done,
                               decoration: const InputDecoration(
                                 labelText: 'Reorder Level',
                                 border: OutlineInputBorder(),
                               ),
                               keyboardType: TextInputType.number,
+                              onFieldSubmitted: (_) {
+                                if (!_isSaving) {
+                                  _saveStock();
+                                }
+                              },
                             ),
                           ),
                         ],
@@ -3707,6 +3820,12 @@ class _StockOutFlowState extends State<_StockOutFlow> {
     });
   }
 
+  void _advanceFromStep1() {
+    if (_formKey.currentState!.validate()) {
+      setState(() => _step = 2);
+    }
+  }
+
   /// Select the best stock entry based on FEFO (First Expired First Out)
   StockIn _selectFefoStock(List<StockIn> stocks) {
     if (stocks.isEmpty) throw Exception('No stocks available');
@@ -3869,43 +3988,45 @@ class _StockOutFlowState extends State<_StockOutFlow> {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Material(
-        color: Colors.transparent,
-        child: Container(
-          width: 800,
-          constraints: const BoxConstraints(maxHeight: 800),
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 40,
-                offset: const Offset(0, 20),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildHeader(),
-              const Divider(height: 1),
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(32),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    child: KeyedSubtree(
-                      key: ValueKey(_step),
-                      child: _buildCurrentStep(),
+    return _ArrowKeyTraversal(
+      child: Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: 800,
+            constraints: const BoxConstraints(maxHeight: 800),
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 40,
+                  offset: const Offset(0, 20),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildHeader(),
+                const Divider(height: 1),
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(32),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: KeyedSubtree(
+                        key: ValueKey(_step),
+                        child: _buildCurrentStep(),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const Divider(height: 1),
-              _buildFooter(),
-            ],
+                const Divider(height: 1),
+                _buildFooter(),
+              ],
+            ),
           ),
         ),
       ),
@@ -4125,6 +4246,7 @@ class _StockOutFlowState extends State<_StockOutFlow> {
         const SizedBox(height: 20),
         TextFormField(
           controller: _patientNameController,
+          textInputAction: TextInputAction.next,
           decoration: InputDecoration(
             hintText: 'Full name of the patient',
             labelText: _stockOutInsuranceId != null
@@ -4133,6 +4255,7 @@ class _StockOutFlowState extends State<_StockOutFlow> {
             prefixIcon: const Icon(Icons.person_outline),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
+          onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
           validator: (v) =>
               (_stockOutInsuranceId != null && (v == null || v.trim().isEmpty))
               ? 'Required for Insurance'
@@ -4191,12 +4314,14 @@ class _StockOutFlowState extends State<_StockOutFlow> {
           const SizedBox(height: 24),
           TextFormField(
             controller: _cardController,
+            textInputAction: TextInputAction.next,
             decoration: InputDecoration(
               labelText: 'Insurance Card Number *',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
+            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
             validator: (v) =>
                 (_stockOutInsuranceId != null && (v == null || v.isEmpty))
                 ? 'Required'
@@ -4205,12 +4330,14 @@ class _StockOutFlowState extends State<_StockOutFlow> {
           const SizedBox(height: 16),
           TextFormField(
             controller: _companyController,
+            textInputAction: TextInputAction.next,
             decoration: InputDecoration(
               labelText: 'Issuing Company *',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
+            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
             validator: (v) =>
                 (_stockOutInsuranceId != null && (v == null || v.isEmpty))
                 ? 'Required'
@@ -4229,6 +4356,7 @@ class _StockOutFlowState extends State<_StockOutFlow> {
             Expanded(
               child: TextFormField(
                 controller: _prescriberNameController,
+                textInputAction: TextInputAction.next,
                 decoration: InputDecoration(
                   labelText: _stockOutInsuranceId != null
                       ? 'Prescriber Name *'
@@ -4237,6 +4365,7 @@ class _StockOutFlowState extends State<_StockOutFlow> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
+                onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                 validator: (v) =>
                     (_stockOutInsuranceId != null && (v == null || v.isEmpty))
                     ? 'Required'
@@ -4247,6 +4376,7 @@ class _StockOutFlowState extends State<_StockOutFlow> {
             Expanded(
               child: TextFormField(
                 controller: _prescriberLicenseController,
+                textInputAction: TextInputAction.next,
                 decoration: InputDecoration(
                   labelText: _stockOutInsuranceId != null
                       ? 'License ID *'
@@ -4255,6 +4385,7 @@ class _StockOutFlowState extends State<_StockOutFlow> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
+                onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                 validator: (v) =>
                     (_stockOutInsuranceId != null && (v == null || v.isEmpty))
                     ? 'Required'
@@ -4266,12 +4397,14 @@ class _StockOutFlowState extends State<_StockOutFlow> {
         const SizedBox(height: 16),
         TextFormField(
           controller: _organizationController,
+          textInputAction: TextInputAction.done,
           decoration: InputDecoration(
             labelText: _stockOutInsuranceId != null
                 ? 'Prescribing Organization *'
                 : 'Prescribing Organization',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
+          onFieldSubmitted: (_) => _advanceFromStep1(),
           validator: (v) =>
               (_stockOutInsuranceId != null && (v == null || v.isEmpty))
               ? 'Required'
@@ -4361,37 +4494,49 @@ class _StockOutFlowState extends State<_StockOutFlow> {
           _buildSectionTitle('Destination Pharmacy Details'),
           const SizedBox(height: 20),
           TextFormField(
-          controller: _destinationPharmacyNameController,
-          decoration: InputDecoration(
-            labelText: 'Pharmacy Name *',
-            hintText: 'Name of the destination pharmacy',
-            prefixIcon: const Icon(Icons.business),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            controller: _destinationPharmacyNameController,
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(
+              labelText: 'Pharmacy Name *',
+              hintText: 'Name of the destination pharmacy',
+              prefixIcon: const Icon(Icons.business),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
+            validator: (v) => (v == null || v.trim().isEmpty)
+                ? 'Pharmacy name is required'
+                : null,
           ),
-          validator: (v) => (v == null || v.trim().isEmpty)
-              ? 'Pharmacy name is required'
-              : null,
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          controller: _destinationPharmacyPhoneController,
-          decoration: InputDecoration(
-            labelText: 'Phone Number',
-            hintText: '+250 XXX XXX XXX',
-            prefixIcon: const Icon(Icons.phone),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _destinationPharmacyPhoneController,
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(
+              labelText: 'Phone Number',
+              hintText: '+250 XXX XXX XXX',
+              prefixIcon: const Icon(Icons.phone),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
           ),
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          controller: _tinNumberController,
-          decoration: InputDecoration(
-            labelText: 'TIN Number',
-            hintText: 'Tax Identification Number',
-            prefixIcon: const Icon(Icons.numbers),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _tinNumberController,
+            textInputAction: TextInputAction.done,
+            decoration: InputDecoration(
+              labelText: 'TIN Number',
+              hintText: 'Tax Identification Number',
+              prefixIcon: const Icon(Icons.numbers),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onFieldSubmitted: (_) => _advanceFromStep1(),
           ),
-        ),
         ],
       ],
     );
