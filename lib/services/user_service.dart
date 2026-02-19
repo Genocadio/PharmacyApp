@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:nexxpharma/data/database.dart';
 import 'package:nexxpharma/services/dto/user_dto.dart';
 import 'package:nexxpharma/services/exceptions/service_exceptions.dart';
@@ -126,6 +127,18 @@ class UserService {
   /// Get total count of active users
   Future<int> getUsersCount() async {
     return await _database.getUsersCount();
+  }
+
+  /// Clear all users (for fresh manager creation after activation)
+  Future<void> clearAllUsers() async {
+    final users = await _database.getAllUsers();
+    for (final user in users) {
+      try {
+        await _database.hardDeleteUser(user.id);
+      } catch (e) {
+        debugPrint('Error deleting user ${user.id}: $e');
+      }
+    }
   }
 
   /// Deactivate a user

@@ -184,6 +184,17 @@ class _ActivationScreenState extends State<ActivationScreen> {
     await _checkStatus();
   }
 
+  void _handleClearUsers() async {
+    // Clear all users to allow creating a new manager
+    await widget.authService.userService.clearAllUsers();
+    // Reset manager creation controllers
+    _managerNamesController.clear();
+    _managerPhoneController.clear();
+    _managerEmailController.clear();
+    _managerPasswordController.clear();
+    await _checkStatus();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_initializing) {
@@ -479,6 +490,11 @@ class _ActivationScreenState extends State<ActivationScreen> {
                                 style: TextStyle(fontSize: 18),
                               ),
                             ),
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: _handleClearUsers,
+                        child: const Text('Clear & Create New Manager'),
+                      ),
                     ],
                   ),
                 ),

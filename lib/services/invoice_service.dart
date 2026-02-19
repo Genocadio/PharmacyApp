@@ -202,7 +202,7 @@ class InvoiceService {
                     ),
                     pw.SizedBox(height: 5),
                     pw.Text('$customerLabel: ${stockOut.patientName}'),
-                    if (stockOut.insuranceCardNumber != null) ...[
+                    if (!isWholesale && stockOut.insuranceCardNumber != null) ...[
                       pw.Text('Insurance Card: ${stockOut.insuranceCardNumber}'),
                       if (stockOut.issuingCompany != null)
                         pw.Text('Issuer: ${stockOut.issuingCompany}'),
@@ -217,15 +217,26 @@ class InvoiceService {
 
               // Items Table
               pw.TableHelper.fromTextArray(
-                headers: ['Item', 'Qty', 'Unit Price', 'Ins. Pay', 'Total'],
+                headers: isWholesale
+                    ? ['Item', 'Qty', 'Unit Price', 'Total']
+                    : ['Item', 'Qty', 'Unit Price', 'Ins. Pay', 'Total'],
                 data: stockOut.stockOutItems.map((item) {
-                  return [
-                    item.productName,
-                    item.quantitySold.toString(),
-                    currencyFormat.format(item.pricePerUnit),
-                    currencyFormat.format(item.insurancePays),
-                    currencyFormat.format(item.itemTotal),
-                  ] as List<dynamic>;
+                  if (isWholesale) {
+                    return [
+                      item.productName,
+                      item.quantitySold.toString(),
+                      currencyFormat.format(item.pricePerUnit),
+                      currencyFormat.format(item.itemTotal),
+                    ] as List<dynamic>;
+                  } else {
+                    return [
+                      item.productName,
+                      item.quantitySold.toString(),
+                      currencyFormat.format(item.pricePerUnit),
+                      currencyFormat.format(item.insurancePays),
+                      currencyFormat.format(item.itemTotal),
+                    ] as List<dynamic>;
+                  }
                 }).toList(),
                 headerStyle: pw.TextStyle(
                   fontWeight: pw.FontWeight.bold,
@@ -261,8 +272,9 @@ class InvoiceService {
                           ],
                         ),
                         pw.Divider(),
-                        if (stockOut.stockOutItems
-                            .any((i) => i.insurancePays > 0)) ...[
+                        if (!isWholesale &&
+                            stockOut.stockOutItems
+                                .any((i) => i.insurancePays > 0)) ...[
                           pw.Row(
                             mainAxisAlignment:
                                 pw.MainAxisAlignment.spaceBetween,
@@ -482,12 +494,12 @@ class InvoiceService {
                   fontWeight: pw.FontWeight.bold,
                 ),
               ),
-              if (stockOut.insuranceCardNumber != null)
+              if (!isWholesale && stockOut.insuranceCardNumber != null)
                 pw.Text(
                   'Card: ${stockOut.insuranceCardNumber}',
                   style: const pw.TextStyle(fontSize: 8),
                 ),
-              if (stockOut.issuingCompany != null)
+              if (!isWholesale && stockOut.issuingCompany != null)
                 pw.Text(
                   stockOut.issuingCompany!,
                   style: const pw.TextStyle(fontSize: 8),
@@ -525,7 +537,7 @@ class InvoiceService {
                         ),
                       ],
                     ),
-                    if (item.insurancePays > 0)
+                    if (!isWholesale && item.insurancePays > 0)
                       pw.Row(
                         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                         children: [
@@ -564,7 +576,8 @@ class InvoiceService {
                   ),
                 ],
               ),
-              if (stockOut.stockOutItems.any((i) => i.insurancePays > 0)) ...[
+              if (!isWholesale &&
+                  stockOut.stockOutItems.any((i) => i.insurancePays > 0)) ...[
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [

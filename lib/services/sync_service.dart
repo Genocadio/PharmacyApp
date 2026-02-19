@@ -773,6 +773,11 @@ class SyncService extends ChangeNotifier {
       debugPrint('DeviceId: $deviceId');
       debugPrint('StocksIn count: ${stocksIn.length}');
       debugPrint('StocksOut count: ${stocksOut.length}');
+      debugPrint('Signature Payload: $signaturePayload');
+      debugPrint('PrivateKey: ${privateKey.toString()}');
+      debugPrint('PublicKey: ${privateKey.publicKey.toString()}');
+      debugPrint('Signature: $signature');
+      debugPrint('Request Body: ${json.encode(request)}');
 
       final response = await http
           .post(
@@ -822,6 +827,15 @@ class SyncService extends ChangeNotifier {
         }
       } else {
         _error = 'Stocks sync failed: ${response.statusCode}';
+        debugPrint('=== Sync Stocks Error ===');
+        debugPrint('Status: ${response.statusCode}');
+        debugPrint('DeviceId: $deviceId');
+        debugPrint('Signature Payload: $signaturePayload');
+        debugPrint('PrivateKey: ${privateKey.toString()}');
+        debugPrint('PublicKey: ${privateKey.publicKey.toString()}');
+        debugPrint('Signature: $signature');
+        debugPrint('Request Body: ${json.encode(request)}');
+        debugPrint('Response: ${response.body}');
         debugPrint('❌ Error: ${response.body}');
         return false;
       }

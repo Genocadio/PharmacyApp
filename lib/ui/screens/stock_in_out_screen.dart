@@ -204,6 +204,9 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
 
     // Listen for device type, activation status, and other setting changes
     _setupChangeListeners();
+    
+    // Listen for session expiration to force logout
+    widget.authService.addListener(_onAuthChanged);
 
     _horizontalHeaderScrollController.addListener(() {
       if (_horizontalHeaderScrollController.offset !=
@@ -252,6 +255,14 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
       setState(() {
         // Rebuild UI with new device state
       });
+    }
+  }
+
+  /// Called when authentication state changes (session expiration)
+  void _onAuthChanged() {
+    if (mounted && !widget.authService.isAuthenticated) {
+      // Session expired, close any open dialogs and return to login
+      Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
 
@@ -1242,23 +1253,42 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
                   icon: const Icon(Icons.description_outlined),
                   tooltip: 'View Invoice',
                   onPressed: () async {
-                    final pdfFuture = _buildInvoicePdf(stockOut);
                     if (mounted) {
+                      final size = MediaQuery.sizeOf(context);
                       showDialog(
                         context: context,
                         builder: (context) {
-                          final size = MediaQuery.sizeOf(context);
                           return Dialog(
                             insetPadding: const EdgeInsets.all(20),
                             child: SizedBox(
                               width: size.width * 0.9,
                               height: size.height * 0.85,
-                              child: PdfPreview(
-                                build: (format) => pdfFuture,
-                                canChangePageFormat: false,
-                                canChangeOrientation: false,
-                                canDebug: false,
-                                actions: const [],
+                              child: FutureBuilder<Uint8List>(
+                                future: _buildInvoicePdf(stockOut),
+                                builder: (context, snapshot) {
+                                  if (snapshot.connectionState == ConnectionState.waiting) {
+                                    return const Center(
+                                      child: CircularProgressIndicator(),
+                                    );
+                                  }
+                                  if (snapshot.hasError) {
+                                    return Center(
+                                      child: Text('Error generating PDF: ${snapshot.error}'),
+                                    );
+                                  }
+                                  if (!snapshot.hasData) {
+                                    return const Center(child: Text('No PDF data'));
+                                  }
+                                  return PdfPreview(
+                                    build: (format) async => snapshot.data!,
+                                    canChangePageFormat: false,
+                                    canChangeOrientation: false,
+                                    canDebug: false,
+                                    actions: const [],
+                                    pdfFileName: 'invoice.pdf',
+                                    maxPageWidth: 700,
+                                  );
+                                },
                               ),
                             ),
                           );
@@ -2590,6 +2620,7 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
   void dispose() {
     // Clean up listeners to prevent memory leaks
     widget.deviceStateManager.removeListener(_onDeviceStateChanged);
+    widget.authService.removeListener(_onAuthChanged);
     
     _horizontalHeaderScrollController.dispose();
     _horizontalBodyScrollController.dispose();

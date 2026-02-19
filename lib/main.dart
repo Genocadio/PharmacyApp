@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:nexxpharma/data/database.dart';
 import 'package:nexxpharma/services/auth_service.dart';
 import 'package:nexxpharma/services/auto_update_service.dart';
@@ -31,6 +32,17 @@ void main() async {
       return stack.toTrace().vmTrace;
     }
     return stack;
+  };
+
+  // Suppress PDF font Unicode warnings from dart_pdf library
+  final originalDebugPrint = debugPrint;
+  debugPrint = (String? message, {int? wrapWidth}) {
+    if (message != null &&
+        (message.contains('has no Unicode support') ||
+         message.contains('Fonts-Management'))) {
+      return;
+    }
+    originalDebugPrint(message, wrapWidth: wrapWidth);
   };
 
   final hasInstanceLock = await _acquireSingleInstanceLock();
