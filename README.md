@@ -98,16 +98,12 @@ flutter test
 
 # Clean build artifacts
 flutter clean
-
-# Build Android release artifacts (AAB + APK)
-./build-android-release.sh
 ```
 
 ## Additional Internal Docs
 
 - `lib/data/README.md` — database schema and CRUD layer details
 - `lib/services/README.md` — service-layer architecture and business logic patterns
-- `ANDROID_RELEASE_UPDATE_GUIDE.md` — Android signing, CI release, and in-app update flow
 
 ## License
 

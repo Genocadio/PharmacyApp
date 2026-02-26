@@ -1,0 +1,73 @@
+name: Android Publish - Prebuilt Artifacts
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read version from pubspec.yaml
+        id: version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Collect Android artifacts from repository
+        id: artifacts
+        run: |
+          shopt -s nullglob
+          files=(release/android/*.apk release/android/*.aab)
+
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "has_files=false" >> "$GITHUB_OUTPUT"
+            echo "No Android artifacts found under release/android"
+            exit 0
+          fi
+
+          printf '%s\n' "${files[@]}" > android_files.txt
+          echo "has_files=true" >> "$GITHUB_OUTPUT"
+          {
+            echo "file_list<<EOF"
+            cat android_files.txt
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Artifacts to publish:"
+          cat android_files.txt
+
+      - name: Upload Android artifacts as workflow artifact
+        if: steps.artifacts.outputs.has_files == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexxpharma-android-release
+          path: |
+            release/android/*.apk
+            release/android/*.aab
+          if-no-files-found: error
+
+      - name: Publish Android artifacts to GitHub Release
+        if: steps.artifacts.outputs.has_files == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: nexxpharma v${{ steps.version.outputs.version }}
+          files: ${{ steps.artifacts.outputs.file_list }}
+          overwrite_files: true
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Skip note when no Android artifacts
+        if: steps.artifacts.outputs.has_files != 'true'
+        run: echo "Skipping publish because no prebuilt Android artifacts were committed in release/android/."

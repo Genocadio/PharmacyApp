@@ -1,7 +1,8 @@
-# Copy this file to android/key.properties and set real values.
-# Do NOT commit android/key.properties.
+# Copy this file to android/key.properties and fill with your real values.
+# Do NOT commit android/key.properties or your keystore file.
 
-storePassword=YOUR_STORE_PASSWORD
-keyPassword=YOUR_KEY_PASSWORD
+# Path can be relative to the android/ directory, or absolute.
+storeFile=../keystore/upload-keystore.jks
+storePassword=CHANGE_ME
 keyAlias=upload
-storeFile=/absolute/path/to/your-upload-keystore.jks
+keyPassword=CHANGE_ME

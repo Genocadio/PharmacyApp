@@ -79,7 +79,9 @@ enum UpdateStatus {
   noConnection,
 }
 
-/// Service to handle automatic updates for Windows
+/// Service to handle release checks and updates.
+/// - Windows: check + download + install
+/// - Android: check + announce only
 class AutoUpdateService extends ChangeNotifier {
   static final AutoUpdateService _instance = AutoUpdateService._internal();
   factory AutoUpdateService() => _instance;
@@ -99,6 +101,8 @@ class AutoUpdateService extends ChangeNotifier {
   bool _autoCheckEnabled = true;
   Duration _checkInterval = const Duration(hours: 5);  // Check every 5 hours by default
   DateTime? _lastCheckTime;
+  String? _pendingAnnouncementMessage;
+  String? _lastAnnouncedVersion;
 
   UpdateStatus get status => _status;
   String? get errorMessage => _errorMessage;
@@ -109,6 +113,12 @@ class AutoUpdateService extends ChangeNotifier {
   bool get autoCheckEnabled => _autoCheckEnabled;
   Duration get checkInterval => _checkInterval;
   DateTime? get lastCheckTime => _lastCheckTime;
+
+  String? takePendingAnnouncementMessage() {
+    final message = _pendingAnnouncementMessage;
+    _pendingAnnouncementMessage = null;
+    return message;
+  }
 
   /// Configure GitHub repository
   void configure({required String owner, required String repo}) {
@@ -125,13 +135,13 @@ class AutoUpdateService extends ChangeNotifier {
     _autoCheckEnabled = autoCheck;
     _checkInterval = checkInterval;
 
-    if (!Platform.isWindows) {
-      debugPrint('Auto-update only supported on Windows');
+    if (!(Platform.isWindows || Platform.isAndroid)) {
+      debugPrint('Release checks are supported on Windows and Android only');
       return;
     }
 
     if (_autoCheckEnabled) {
-      debugPrint('Initializing auto-update service with ${checkInterval.inHours}h interval');
+      debugPrint('Initializing release checks with ${checkInterval.inHours}h interval');
       
       // Check immediately on startup if requested
       if (checkImmediately) {
@@ -178,9 +188,8 @@ class AutoUpdateService extends ChangeNotifier {
 
   /// Check for updates
   Future<void> checkForUpdates({bool silent = false}) async {
-    // Only work on Windows
-    if (!Platform.isWindows) {
-      debugPrint('Auto-update only supported on Windows');
+    if (!(Platform.isWindows || Platform.isAndroid)) {
+      debugPrint('Release checks are supported on Windows and Android only');
       return;
     }
 
@@ -218,6 +227,13 @@ class AutoUpdateService extends ChangeNotifier {
         if (_isNewerVersion(_latestRelease!.version)) {
           _status = UpdateStatus.available;
           debugPrint('Update available!');
+
+          if (Platform.isAndroid &&
+              _lastAnnouncedVersion != _latestRelease!.version) {
+            _pendingAnnouncementMessage =
+                'New Android release ${_latestRelease!.version} is available.';
+            _lastAnnouncedVersion = _latestRelease!.version;
+          }
         } else {
           _status = UpdateStatus.upToDate;
           debugPrint('Already up to date');
@@ -236,6 +252,11 @@ class AutoUpdateService extends ChangeNotifier {
 
   /// Download the update
   Future<bool> downloadUpdate() async {
+    if (!Platform.isWindows) {
+      _errorMessage = 'Download/install is only supported on Windows';
+      return false;
+    }
+
     if (_latestRelease == null) {
       _errorMessage = 'No update available';
       return false;
@@ -302,6 +323,11 @@ class AutoUpdateService extends ChangeNotifier {
 
   /// Install the update (launches PowerShell updater script)
   Future<bool> installUpdate() async {
+    if (!Platform.isWindows) {
+      _errorMessage = 'Download/install is only supported on Windows';
+      return false;
+    }
+
     if (_downloadedZipPath == null || !File(_downloadedZipPath!).existsSync()) {
       _errorMessage = 'Update file not found';
       return false;
@@ -444,6 +470,7 @@ class AutoUpdateService extends ChangeNotifier {
     _latestRelease = null;
     _downloadProgress = 0.0;
     _downloadedZipPath = null;
+    _pendingAnnouncementMessage = null;
     notifyListeners();
   }
 

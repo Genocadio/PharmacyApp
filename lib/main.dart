@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:nexxpharma/data/database.dart';
 import 'package:nexxpharma/services/auth_service.dart';
 import 'package:nexxpharma/services/auto_update_service.dart';
-import 'package:nexxpharma/services/android_update_service.dart';
 import 'package:nexxpharma/services/settings_service.dart';
 import 'package:nexxpharma/services/user_service.dart';
 import 'package:nexxpharma/services/sync_service.dart';
@@ -60,6 +59,7 @@ void main() async {
   final stockInService = StockInService(database, settingsService);
   final stockOutService = StockOutService(database, settingsService);
   final notificationService = NotificationService();
+  final autoUpdateService = AutoUpdateService();
   final activationService = ActivationService(
     database,
     settingsService,
@@ -78,25 +78,34 @@ void main() async {
     activationService,
   );
 
-  // Configure auto-update service (Windows only)
+  // Configure release checks and updates
   if (Platform.isWindows) {
-    AutoUpdateService().configure(
+    autoUpdateService.configure(
       owner: 'Genocadio',
       repo: 'PharmacyApp',
     );
     
     // Initialize automatic update checks
     // Checks every 5 hours and performs initial check 10 seconds after startup
-    AutoUpdateService().initialize(
+    autoUpdateService.initialize(
       autoCheck: true,
       checkInterval: const Duration(hours: 5),
       checkImmediately: true,
     );
-  }
+  } else if (Platform.isAndroid) {
+    autoUpdateService.configure(
+      owner: 'Genocadio',
+      repo: 'PharmacyApp',
+    );
 
-  // Configure in-app updates (Android only)
-  if (Platform.isAndroid) {
-    AndroidUpdateService().initialize(
+    autoUpdateService.addListener(() {
+      final announcement = autoUpdateService.takePendingAnnouncementMessage();
+      if (announcement != null) {
+        notificationService.showInfo(announcement);
+      }
+    });
+
+    autoUpdateService.initialize(
       autoCheck: true,
       checkInterval: const Duration(hours: 6),
       checkImmediately: true,

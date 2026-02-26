@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,10 +8,12 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-val keyProperties = java.util.Properties()
-val keyPropertiesFile = rootProject.file("key.properties")
-if (keyPropertiesFile.exists()) {
-    keyPropertiesFile.inputStream().use { keyProperties.load(it) }
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+val hasReleaseSigning = keystorePropertiesFile.exists()
+
+if (hasReleaseSigning) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 android {
@@ -37,20 +42,19 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            val storeFilePath = keyProperties.getProperty("storeFile")
-            if (!storeFilePath.isNullOrBlank()) {
-                storeFile = file(storeFilePath)
+        if (hasReleaseSigning) {
+            create("release") {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
             }
-            storePassword = keyProperties.getProperty("storePassword")
-            keyAlias = keyProperties.getProperty("keyAlias")
-            keyPassword = keyProperties.getProperty("keyPassword")
         }
     }
 
     buildTypes {
         release {
-            signingConfig = if (keyPropertiesFile.exists()) {
+            signingConfig = if (hasReleaseSigning) {
                 signingConfigs.getByName("release")
             } else {
                 signingConfigs.getByName("debug")
