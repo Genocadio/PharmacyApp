@@ -510,20 +510,41 @@ class WorkerDTO {
   });
 
   factory WorkerDTO.fromJson(Map<String, dynamic> json) {
+    final fullName = (json['name'] ?? '').toString().trim();
+    final firstNameFromFull = fullName.isEmpty ? '' : fullName.split(' ').first;
+    final lastNameFromFull = fullName.isEmpty
+        ? ''
+        : fullName.split(' ').skip(1).join(' ');
+    final roleRaw = (json['role'] ?? '').toString().toLowerCase();
+
+    UserRole parsedRole;
+    switch (roleRaw) {
+      case 'manager':
+        parsedRole = UserRole.Manager;
+        break;
+      case 'pharmacist':
+        parsedRole = UserRole.Pharmacist;
+        break;
+      case 'nurse':
+        parsedRole = UserRole.Nurse;
+        break;
+      case 'owner':
+        parsedRole = UserRole.Owner;
+        break;
+      default:
+        parsedRole = UserRole.Assistant;
+        break;
+    }
+
     return WorkerDTO(
       id: json['workerId'] ?? json['id'] ?? '',
-      firstName: json['firstName'] ?? '',
-      lastName: json['lastName'] ?? '',
-      phone: json['phone'],
+      firstName: json['firstName'] ?? firstNameFromFull,
+      lastName: json['lastName'] ?? lastNameFromFull,
+      phone: json['phone'] ?? json['phoneNumber'],
       email: json['email'],
-      role: json['role'] != null
-          ? UserRole.values.firstWhere(
-              (e) => e.name == json['role'],
-              orElse: () => UserRole.Assistant,
-            )
-          : UserRole.Assistant,
-      pinHash: json['pin'],
-      active: json['active'] ?? true,
+      role: parsedRole,
+      pinHash: json['pin'] ?? json['pinHash'],
+      active: json['active'] ?? json['isActive'] ?? true,
       version: json['version'] ?? 0,
       deletedAt: json['deletedAt'] != null
           ? DateTime.parse(json['deletedAt'])

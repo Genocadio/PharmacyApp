@@ -23,6 +23,7 @@ class SettingsService extends ChangeNotifier {
   static const String _lastPublicKeyRotationAtKey =
       'last_public_key_rotation_at';
   static const String _lastDeviceDetailsAtKey = 'last_device_details_at';
+  static const String _lastWorkersFetchAtKey = 'last_workers_fetch_at';
 
   final SharedPreferences _prefs;
 
@@ -39,6 +40,7 @@ class SettingsService extends ChangeNotifier {
   DateTime? _lastDeviceStatusAt;
   DateTime? _lastPublicKeyRotationAt;
   DateTime? _lastDeviceDetailsAt;
+  DateTime? _lastWorkersFetchAt;
 
   SettingsService(this._prefs)
     : _themeMode = _loadThemeMode(_prefs),
@@ -65,6 +67,9 @@ class SettingsService extends ChangeNotifier {
             : null,
         _lastDeviceDetailsAt = _prefs.getString(_lastDeviceDetailsAtKey) != null
           ? DateTime.parse(_prefs.getString(_lastDeviceDetailsAtKey)!)
+          : null,
+        _lastWorkersFetchAt = _prefs.getString(_lastWorkersFetchAtKey) != null
+          ? DateTime.parse(_prefs.getString(_lastWorkersFetchAtKey)!)
           : null;
 
   SharedPreferences get prefs => _prefs;
@@ -83,6 +88,7 @@ class SettingsService extends ChangeNotifier {
   DateTime? get lastDeviceStatusAt => _lastDeviceStatusAt;
   DateTime? get lastPublicKeyRotationAt => _lastPublicKeyRotationAt;
   DateTime? get lastDeviceDetailsAt => _lastDeviceDetailsAt;
+  DateTime? get lastWorkersFetchAt => _lastWorkersFetchAt;
 
   static String _loadBackendUrl(SharedPreferences prefs) {
     if (kDebugMode) {
@@ -277,14 +283,22 @@ class SettingsService extends ChangeNotifier {
     await _prefs.setString(_lastDeviceDetailsAtKey, time.toIso8601String());
   }
 
+  Future<void> updateLastWorkersFetchAt(DateTime time) async {
+    _lastWorkersFetchAt = time;
+    notifyListeners();
+    await _prefs.setString(_lastWorkersFetchAtKey, time.toIso8601String());
+  }
+
   Future<void> resetDeviceTracking() async {
     _lastDeviceStatusAt = null;
     _lastPublicKeyRotationAt = null;
     _lastDeviceDetailsAt = null;
+    _lastWorkersFetchAt = null;
     notifyListeners();
     await _prefs.remove(_lastDeviceStatusAtKey);
     await _prefs.remove(_lastPublicKeyRotationAtKey);
     await _prefs.remove(_lastDeviceDetailsAtKey);
+    await _prefs.remove(_lastWorkersFetchAtKey);
   }
 
   Future<void> resetSync() async {

@@ -31,14 +31,146 @@ class _LoginScreenState extends State<LoginScreen> {
   void _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       final success = await widget.authService.login(
-        _identifierController.text,
+        _identifierController.text.trim(),
         _passwordController.text,
       );
 
       if (!success) {
+        if (widget.authService.requiresPasswordSetup && mounted) {
+          await _showPasswordSetupDialog();
+          return;
+        }
+
         Toast.error(widget.authService.error ?? 'Login failed');
       }
     }
+  }
+
+  Future<void> _showPasswordSetupDialog() async {
+    final formKey = GlobalKey<FormState>();
+    final passwordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    bool obscurePassword = true;
+    bool obscureConfirmPassword = true;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Create Password'),
+              content: SizedBox(
+                width: 420,
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'First login detected for this worker. Create a password to continue.',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: passwordController,
+                        obscureText: obscurePassword,
+                        decoration: InputDecoration(
+                          labelText: 'New Password',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscurePassword
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
+                            onPressed: () {
+                              setStateDialog(() {
+                                obscurePassword = !obscurePassword;
+                              });
+                            },
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.length < 6) {
+                            return 'Password must be at least 6 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: confirmPasswordController,
+                        obscureText: obscureConfirmPassword,
+                        decoration: InputDecoration(
+                          labelText: 'Confirm Password',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscureConfirmPassword
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
+                            onPressed: () {
+                              setStateDialog(() {
+                                obscureConfirmPassword = !obscureConfirmPassword;
+                              });
+                            },
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value != passwordController.text) {
+                            return 'Passwords do not match';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (!formKey.currentState!.validate()) {
+                      return;
+                    }
+
+                    final success = await widget.authService
+                        .createPasswordAndLogin(passwordController.text);
+
+                    if (context.mounted) {
+                      if (success) {
+                        Navigator.of(context).pop();
+                        Toast.success('Password created successfully');
+                      } else {
+                        Toast.error(
+                          widget.authService.error ??
+                              'Failed to create password',
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Create Password'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    passwordController.dispose();
+    confirmPasswordController.dispose();
   }
 
   @override
@@ -157,12 +289,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               : Colors.white.withOpacity(0.05),
                         ),
                         onFieldSubmitted: (_) => _handleLogin(),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your password';
-                          }
-                          return null;
-                        },
+                        validator: (_) => null,
                       ),
                       const SizedBox(height: 40),
                       widget.authService.isLoading

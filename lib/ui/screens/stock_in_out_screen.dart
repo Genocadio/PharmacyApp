@@ -21,7 +21,6 @@ import 'package:nexxpharma/ui/screens/profile_screen.dart';
 import 'package:nexxpharma/ui/screens/settings_screen.dart';
 import 'package:nexxpharma/ui/screens/user_management_screen.dart';
 import 'package:nexxpharma/ui/widgets/toast.dart';
-import 'dart:typed_data';
 import 'dart:ui';
 
 class StockInOutScreen extends StatefulWidget {
@@ -2282,6 +2281,7 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
       pageBuilder: (context, anim1, anim2) {
         return _StockOutFlow(
           database: widget.database,
+          stockInService: widget.stockInService,
           stockOutService: widget.stockOutService,
           authService: widget.authService,
           settingsService: widget.settingsService,
@@ -3688,7 +3688,7 @@ class _ProductPeekIcon extends StatelessWidget {
 
 /// Represents a stock allocation for a cart item
 class _StockAllocation {
-  StockIn stock;
+  StockInDTO stock;
   int quantityAllocated;
 
   _StockAllocation({required this.stock, required this.quantityAllocated});
@@ -3696,7 +3696,7 @@ class _StockAllocation {
 
 class _StockOutItemForm {
   final Product product;
-  final StockIn initialStock;
+  final StockInDTO initialStock;
   List<_StockAllocation> allocations; // Selected stock allocations
   Set<String> selectedStockIds; // Track which stocks are selected
   int quantity;
@@ -3721,7 +3721,7 @@ class _StockOutItemForm {
   }
 
   /// Get the primary stock (first allocation)
-  StockIn get stock =>
+  StockInDTO get stock =>
       allocations.isNotEmpty ? allocations[0].stock : initialStock;
 
   /// Total quantity across all allocations
@@ -3735,6 +3735,7 @@ class _StockOutItemForm {
 
 class _StockOutFlow extends StatefulWidget {
   final AppDatabase database;
+  final StockInService stockInService;
   final StockOutService stockOutService;
   final AuthService authService;
   final SettingsService settingsService;
@@ -3742,6 +3743,7 @@ class _StockOutFlow extends StatefulWidget {
 
   const _StockOutFlow({
     required this.database,
+    required this.stockInService,
     required this.stockOutService,
     required this.authService,
     required this.settingsService,
@@ -3833,7 +3835,7 @@ class _StockOutFlowState extends State<_StockOutFlow> {
 
   Future<void> _updateItemPriceAndCoverage(_StockOutItemForm item) async {
     // 1. Start with private price
-    double price = item.stock.pricePerUnit ?? 0;
+    double price = item.stock.pricePerUnit;
     Insurance? itemInsurance = _selectedInsurance;
     String? itemInsuranceId = _stockOutInsuranceId;
 
@@ -3884,7 +3886,9 @@ class _StockOutFlowState extends State<_StockOutFlow> {
   }
 
   void _addItem(Product product) async {
-    final stockItems = await widget.database.getStockInsByProduct(product.id);
+    final stockItems = await widget.stockInService.getStockInsByProduct(
+      product.id,
+    );
 
     if (stockItems.isEmpty) {
       Toast.warning('No stock available for this product');
@@ -3913,7 +3917,7 @@ class _StockOutFlowState extends State<_StockOutFlow> {
       product: product,
       initialStock: selectedStock,
       quantity: 1,
-      price: selectedStock.pricePerUnit ?? 0,
+      price: selectedStock.pricePerUnit,
     );
 
     await _updateItemPriceAndCoverage(newItem);
@@ -3932,7 +3936,7 @@ class _StockOutFlowState extends State<_StockOutFlow> {
   }
 
   /// Select the best stock entry based on FEFO (First Expired First Out)
-  StockIn _selectFefoStock(List<StockIn> stocks) {
+  StockInDTO _selectFefoStock(List<StockInDTO> stocks) {
     if (stocks.isEmpty) throw Exception('No stocks available');
 
     final sorted = [...stocks];
@@ -5400,7 +5404,7 @@ class _StockOutFlowState extends State<_StockOutFlow> {
   /// Redistribute quantity across selected stocks using FEFO
   /// Auto-selects additional stocks if needed
   Future<void> _updateCartItemQuantity(_StockOutItemForm item) async {
-    final allStocks = await widget.database.getStockInsByProduct(
+    final allStocks = await widget.stockInService.getStockInsByProduct(
       item.product.id,
     );
 
@@ -5470,7 +5474,7 @@ class _StockOutFlowState extends State<_StockOutFlow> {
   }
 
   /// FEFO sort comparator
-  int _sortByFEFO(StockIn a, StockIn b) {
+  int _sortByFEFO(StockInDTO a, StockInDTO b) {
     final aExpired =
         a.expiryDate != null && a.expiryDate!.isBefore(DateTime.now());
     final bExpired =
@@ -5501,8 +5505,8 @@ class _StockOutFlowState extends State<_StockOutFlow> {
     _StockOutItemForm item,
     BuildContext context,
   ) {
-    return FutureBuilder<List<StockIn>>(
-      future: widget.database.getStockInsByProduct(item.product.id),
+    return FutureBuilder<List<StockInDTO>>(
+      future: widget.stockInService.getStockInsByProduct(item.product.id),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const SizedBox(
@@ -5941,8 +5945,8 @@ class _StockOutFlowState extends State<_StockOutFlow> {
     _StockOutItemForm item,
     BuildContext context,
   ) {
-    return FutureBuilder<List<StockIn>>(
-      future: widget.database.getStockInsByProduct(item.product.id),
+    return FutureBuilder<List<StockInDTO>>(
+      future: widget.stockInService.getStockInsByProduct(item.product.id),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const SizedBox(width: 200, child: CircularProgressIndicator());

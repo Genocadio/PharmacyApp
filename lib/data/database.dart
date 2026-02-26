@@ -1024,6 +1024,13 @@ class AppDatabase extends _$AppDatabase {
     )..where((t) => t.email.equals(email))).getSingleOrNull();
   }
 
+  /// Get user by phone
+  Future<User?> getUserByPhone(String phoneNumber) async {
+    return (select(
+      users,
+    )..where((t) => t.phoneNumber.equals(phoneNumber))).getSingleOrNull();
+  }
+
   /// Get all users (excluding soft-deleted)
   Future<List<User>> getAllUsers() async {
     return (select(users)..where((t) => t.deletedAt.isNull())).get();
@@ -1154,6 +1161,20 @@ class AppDatabase extends _$AppDatabase {
     return result ?? 0;
   }
 
+  /// Count login accounts (local users + active workers)
+  Future<int> getLoginAccountsCount() async {
+    final usersCount = await getUsersCount();
+
+    final workersCountExp = workers.id.count();
+    final workersQuery = selectOnly(workers)
+      ..addColumns([workersCountExp])
+      ..where(workers.active.equals(true) & workers.deletedAt.isNull());
+    final workersCount =
+        await workersQuery.map((row) => row.read(workersCountExp)).getSingle();
+
+    return usersCount + (workersCount ?? 0);
+  }
+
   /// Delete module info (for reset)
   Future<void> deleteModule() async {
     await delete(modules).go();
@@ -1247,26 +1268,49 @@ class AppDatabase extends _$AppDatabase {
 
   /// Save or update workers synced from server
   Future<void> saveWorkers(int moduleId, List<WorkerDTO> workerDtoList) async {
-    // Delete existing workers for this module (since we get full list from server)
-    await (delete(workers)..where((t) => t.moduleId.equals(moduleId))).go();
+    final existing = await getWorkersByModule(moduleId);
+    final existingById = {for (final worker in existing) worker.id: worker};
+    final incomingIds = workerDtoList.map((worker) => worker.id).toSet();
 
-    // Insert new workers
     for (final worker in workerDtoList) {
-      await into(workers).insert(
-        WorkersCompanion(
-          id: Value(worker.id),
-          moduleId: Value(moduleId),
-          firstName: Value(worker.firstName),
-          lastName: Value(worker.lastName),
-          phone: Value(worker.phone),
-          email: Value(worker.email),
-          role: Value(worker.role),
-          pinHash: Value(worker.pinHash),
-          active: Value(worker.active),
-          version: Value(worker.version),
-          deletedAt: Value(worker.deletedAt),
-        ),
+      final existingWorker = existingById[worker.id];
+      final effectivePinHash = worker.pinHash ?? existingWorker?.pinHash;
+
+      final companion = WorkersCompanion(
+        id: Value(worker.id),
+        moduleId: Value(moduleId),
+        firstName: Value(worker.firstName),
+        lastName: Value(worker.lastName),
+        phone: Value(worker.phone),
+        email: Value(worker.email),
+        role: Value(worker.role),
+        pinHash: Value(effectivePinHash),
+        active: Value(worker.active),
+        version: Value(worker.version),
+        deletedAt: Value(worker.deletedAt),
+        updatedAt: Value(DateTime.now()),
       );
+
+      if (existingWorker == null) {
+        await into(workers).insert(companion);
+      } else {
+        await (update(workers)..where((t) => t.id.equals(worker.id))).write(
+          companion,
+        );
+      }
+
+      if (worker.active &&
+          worker.deletedAt == null &&
+          effectivePinHash != null &&
+          effectivePinHash.isNotEmpty) {
+        await upsertUserFromWorkerDTO(worker, effectivePinHash);
+      }
+    }
+
+    for (final worker in existing) {
+      if (!incomingIds.contains(worker.id)) {
+        await (delete(workers)..where((t) => t.id.equals(worker.id))).go();
+      }
     }
   }
 
@@ -1274,6 +1318,92 @@ class AppDatabase extends _$AppDatabase {
   Future<Worker?> getWorker(String workerId) async {
     return (select(workers)..where((t) => t.id.equals(workerId)))
         .getSingleOrNull();
+  }
+
+  /// Find active worker by email or phone
+  Future<Worker?> getWorkerByIdentifier(String identifier) async {
+    return (select(workers)
+          ..where(
+            (t) =>
+                t.active.equals(true) &
+                t.deletedAt.isNull() &
+                (t.email.equals(identifier) | t.phone.equals(identifier)),
+          ))
+        .getSingleOrNull();
+  }
+
+  /// Set worker local password hash (stored in pinHash)
+  Future<void> setWorkerPasswordHash(String workerId, String passwordHash) async {
+    await (update(workers)..where((t) => t.id.equals(workerId))).write(
+      WorkersCompanion(
+        pinHash: Value(passwordHash),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  /// Ensure worker has a corresponding local app user with same ID
+  Future<void> upsertUserFromWorker(Worker worker, String passwordHash) async {
+    final now = DateTime.now();
+    final names = '${worker.firstName} ${worker.lastName}'.trim();
+    final phoneNumber = worker.phone ?? '';
+
+    final userCompanion = UsersCompanion(
+      id: Value(worker.id),
+      names: Value(names.isEmpty ? worker.id : names),
+      phoneNumber: Value(phoneNumber.isEmpty ? worker.id : phoneNumber),
+      email: Value(worker.email),
+      password: Value(passwordHash),
+      role: Value(worker.role),
+      updatedAt: Value(now),
+      deletedAt: const Value.absent(),
+      lastSyncedAt: Value(now),
+    );
+
+    final existing = await (select(users)..where((t) => t.id.equals(worker.id)))
+        .getSingleOrNull();
+
+    if (existing == null) {
+      await into(users).insert(
+        userCompanion.copyWith(createdAt: Value(now)),
+      );
+    } else {
+      await (update(users)..where((t) => t.id.equals(worker.id))).write(
+        userCompanion,
+      );
+    }
+  }
+
+  /// Ensure worker has a corresponding local app user with same ID
+  Future<void> upsertUserFromWorkerDTO(WorkerDTO worker, String passwordHash) async {
+    final now = DateTime.now();
+    final names = '${worker.firstName} ${worker.lastName}'.trim();
+    final phoneNumber = worker.phone ?? '';
+
+    final userCompanion = UsersCompanion(
+      id: Value(worker.id),
+      names: Value(names.isEmpty ? worker.id : names),
+      phoneNumber: Value(phoneNumber.isEmpty ? worker.id : phoneNumber),
+      email: Value(worker.email),
+      password: Value(passwordHash),
+      role: Value(worker.role),
+      updatedAt: Value(now),
+      deletedAt: const Value.absent(),
+      lastSyncedAt: Value(now),
+    );
+
+    final existing = await (select(users)..where((t) => t.id.equals(worker.id)))
+        .getSingleOrNull();
+
+    if (existing == null) {
+      await into(users).insert(
+        userCompanion.copyWith(createdAt: Value(now)),
+      );
+    } else {
+      await (update(users)..where((t) => t.id.equals(worker.id))).write(
+        userCompanion,
+      );
+    }
   }
 
   /// Clear all workers (for reset)

@@ -26,6 +26,7 @@ class ActivationService extends ChangeNotifier {
   // ignore: unused_field
   static const Duration _statusThrottleInterval = Duration(hours: 5);
   static const Duration _detailsThrottleInterval = Duration(hours: 24);
+  static const Duration _workersFetchInterval = Duration(hours: 24);
   static const Duration _statusCheckInterval = Duration(minutes: 5);
   static const Duration _activationTimeout = Duration(seconds: 25);
 
@@ -183,6 +184,7 @@ class ActivationService extends ChangeNotifier {
           deviceResponse,
           privateKeyOverride: privateKeyString,
         );
+        await fetchWorkers(force: true);
 
         _isLoading = false;
         notifyListeners();
@@ -525,6 +527,87 @@ class ActivationService extends ChangeNotifier {
   Future<void> _performScheduledChecks() async {
     // Only check device status - SyncOut is user-triggered
     await _updateDeviceStatusIfNeeded();
+    await fetchWorkersIfDue();
+  }
+
+  Future<bool> fetchWorkersIfDue() async {
+    if (!await _shouldFetchWorkers()) {
+      return false;
+    }
+    return fetchWorkers();
+  }
+
+  Future<bool> _shouldFetchWorkers() async {
+    final activated = await isActivated();
+    if (!activated) return false;
+
+    final lastFetchAt = _settings.lastWorkersFetchAt;
+    if (lastFetchAt == null) return true;
+
+    final elapsed = DateTime.now().difference(lastFetchAt);
+    return elapsed >= _workersFetchInterval;
+  }
+
+  Future<bool> fetchWorkers({bool force = false}) async {
+    if (!force && !await _shouldFetchWorkers()) {
+      return false;
+    }
+
+    final signedContext = await _getSignedContext();
+    if (signedContext == null) {
+      return false;
+    }
+
+    try {
+      final signatureBytes = signedContext.privateKey.createSHA256Signature(
+        utf8.encode(signedContext.deviceId),
+      );
+      final signature = base64Encode(signatureBytes);
+
+      final request = DeviceSignedRequest<void>(
+        deviceId: signedContext.deviceId,
+        signature: signature,
+        data: null,
+      );
+
+      final response = await http.post(
+        Uri.parse('${_settings.backendUrl}/api/devices/fetch-workers'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(request.toJson((data) => data)),
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        debugPrint('Failed to fetch workers: ${response.statusCode} ${response.body}');
+        return false;
+      }
+
+      final body = json.decode(response.body) as Map<String, dynamic>;
+      final apiResponse = DeviceApiResponse<List<WorkerDTO>>.fromJson(
+        body,
+        parseData: (data) {
+          if (data == null) return [];
+          return (data as List)
+              .map((item) => WorkerDTO.fromJson(item as Map<String, dynamic>))
+              .toList();
+        },
+      );
+
+      await _handleDeviceApiResponse(apiResponse);
+
+      final module = await _db.getModule();
+      final workers = apiResponse.data ?? const <WorkerDTO>[];
+      if (module != null) {
+        await _db.saveWorkers(module.id, workers);
+      }
+
+      await _settings.updateLastWorkersFetchAt(DateTime.now());
+      await _authService?.refreshHasUsers();
+      return true;
+    } catch (e, stackTrace) {
+      debugPrint('Error fetching workers: $e');
+      debugPrint('$stackTrace');
+      return false;
+    }
   }
 
   /// Check if device status should be updated (throttled to 5 hours)

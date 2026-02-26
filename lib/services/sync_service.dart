@@ -765,8 +765,10 @@ class SyncService extends ChangeNotifier {
       final request = {
         'deviceId': deviceId,
         'signature': signature,
-        'stocksIn': stocksIn,
-        'stocksOut': stocksOut,
+        'data': {
+          'stocksIn': stocksIn,
+          'stocksOut': stocksOut,
+        },
       };
 
       debugPrint('=== Sync Stocks Request ===');

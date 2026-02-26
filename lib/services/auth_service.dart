@@ -24,14 +24,14 @@ class AuthService extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   bool? _hasUsers;
+  String? _pendingPasswordSetupIdentifier;
 
   AuthService(this._userService, this._prefs) {
     _init();
   }
 
   Future<void> _init() async {
-    final count = await _userService.getUsersCount();
-    _hasUsers = count > 0;
+    await refreshHasUsers();
     
     // Restore session if exists
     await _restoreSession();
@@ -127,6 +127,14 @@ class AuthService extends ChangeNotifier {
   bool? get hasUsers => _hasUsers;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  String? get pendingPasswordSetupIdentifier => _pendingPasswordSetupIdentifier;
+  bool get requiresPasswordSetup => _pendingPasswordSetupIdentifier != null;
+
+  Future<void> refreshHasUsers() async {
+    final count = await _userService.getUsersCount();
+    _hasUsers = count > 0;
+    notifyListeners();
+  }
   
   /// Get time remaining before session expires (in seconds)
   int? get sessionTimeRemaining {
@@ -178,14 +186,80 @@ class AuthService extends ChangeNotifier {
   Future<bool> login(String identifier, String password) async {
     _isLoading = true;
     _error = null;
+    _pendingPasswordSetupIdentifier = null;
     notifyListeners();
 
     try {
+      final normalizedIdentifier = identifier.trim();
+      final normalizedPassword = password.trim();
+
+      if (normalizedPassword.isEmpty) {
+        final needsSetup = await _userService.workerNeedsPasswordSetup(
+          normalizedIdentifier,
+        );
+
+        if (needsSetup) {
+          _pendingPasswordSetupIdentifier = normalizedIdentifier;
+          _isLoading = false;
+          notifyListeners();
+          return false;
+        }
+
+        _error = 'Please enter your password';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
       final loginDTO = LoginDTO(identifier: identifier, password: password);
       _currentUser = await _userService.login(loginDTO);
       _lastActivityTime = DateTime.now(); // Initialize session time
       await _saveSession(); // Persist session
       _startSessionMonitoring(); // Start checking for expiration
+      await refreshHasUsers();
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } on ValidationException catch (e) {
+      if (e.message == 'PASSWORD_SETUP_REQUIRED') {
+        _pendingPasswordSetupIdentifier = identifier.trim();
+        _error = null;
+      } else {
+        _error = e.message;
+      }
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _error = 'An unexpected error occurred';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> createPasswordAndLogin(String password) async {
+    final identifier = _pendingPasswordSetupIdentifier;
+    if (identifier == null) {
+      _error = 'No worker selected for password setup';
+      notifyListeners();
+      return false;
+    }
+
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _currentUser = await _userService.createPasswordForWorker(
+        identifier: identifier,
+        password: password,
+      );
+      _pendingPasswordSetupIdentifier = null;
+      _lastActivityTime = DateTime.now();
+      await _saveSession();
+      _startSessionMonitoring();
+      await refreshHasUsers();
       _isLoading = false;
       notifyListeners();
       return true;
@@ -194,8 +268,8 @@ class AuthService extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return false;
-    } catch (e) {
-      _error = 'An unexpected error occurred';
+    } catch (_) {
+      _error = 'Failed to create password';
       _isLoading = false;
       notifyListeners();
       return false;
@@ -214,6 +288,7 @@ class AuthService extends ChangeNotifier {
       await _saveSession(); // Persist session
       _startSessionMonitoring(); // Start checking for expiration
       _hasUsers = true;
+      _pendingPasswordSetupIdentifier = null;
       _isLoading = false;
       notifyListeners();
       return true;
@@ -274,6 +349,7 @@ class AuthService extends ChangeNotifier {
     _currentUser = null;
     _lastActivityTime = null;
     _error = null;
+    _pendingPasswordSetupIdentifier = null;
     await _clearSessionData(); // Clear persisted session
     notifyListeners();
   }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:nexxpharma/data/database.dart';
 import 'package:nexxpharma/services/auth_service.dart';
 import 'package:nexxpharma/services/auto_update_service.dart';
+import 'package:nexxpharma/services/android_update_service.dart';
 import 'package:nexxpharma/services/settings_service.dart';
 import 'package:nexxpharma/services/user_service.dart';
 import 'package:nexxpharma/services/sync_service.dart';
@@ -57,8 +57,8 @@ void main() async {
   final authService = AuthService(userService, prefs);
   final settingsService = SettingsService(prefs);
   final syncService = SyncService(database, settingsService);
-  final stockInService = StockInService(database);
-  final stockOutService = StockOutService(database);
+  final stockInService = StockInService(database, settingsService);
+  final stockOutService = StockOutService(database, settingsService);
   final notificationService = NotificationService();
   final activationService = ActivationService(
     database,
@@ -90,6 +90,15 @@ void main() async {
     AutoUpdateService().initialize(
       autoCheck: true,
       checkInterval: const Duration(hours: 5),
+      checkImmediately: true,
+    );
+  }
+
+  // Configure in-app updates (Android only)
+  if (Platform.isAndroid) {
+    AndroidUpdateService().initialize(
+      autoCheck: true,
+      checkInterval: const Duration(hours: 6),
       checkImmediately: true,
     );
   }

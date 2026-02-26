@@ -1,0 +1,66 @@
+name: Release Build - Android
+
+on:
+  workflow_run:
+    workflows: ["Inner Build - Android"]
+    types:
+      - completed
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  publish-android:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Android Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nexxpharma-android-release
+          path: release/android-from-inner
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Resolve release version
+        id: version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Extract Android zip artifact
+        run: |
+          mkdir -p release/android
+          ZIP_FILE=$(ls release/android-from-inner/*.zip | head -n 1)
+          if [ -z "$ZIP_FILE" ]; then
+            echo "No Android release zip found"
+            exit 1
+          fi
+          unzip -o "$ZIP_FILE" -d release/extracted
+          cp -R release/extracted/android/* release/android/
+
+      - name: Upload Android Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexxpharma-android-packages
+          path: release/android/*
+          if-no-files-found: error
+
+      - name: Publish Android Packages to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: nexxpharma v${{ steps.version.outputs.version }}
+          files: |
+            release/android/*.aab
+            release/android/*.apk
+          overwrite_files: true
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

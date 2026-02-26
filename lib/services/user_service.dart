@@ -37,26 +37,69 @@ class UserService {
   Future<UserDTO> login(LoginDTO loginDTO) async {
     loginDTO.validate();
 
-    final users = await _database.getAllUsers();
+    final user = await _findUserByIdentifier(loginDTO.identifier);
+    if (user != null) {
+      if (!PasswordHasher.verifyPassword(loginDTO.password, user.password)) {
+        throw ValidationException('Invalid identifier or password');
+      }
+      return _convertToDTO(user);
+    }
 
-    // Search for user by email or phone number
-    User? user;
-    try {
-      user = users.firstWhere(
-        (u) =>
-            (u.email == loginDTO.identifier ||
-                u.phoneNumber == loginDTO.identifier) &&
-            u.deletedAt == null,
-      );
-    } catch (e) {
+    final worker = await _database.getWorkerByIdentifier(loginDTO.identifier);
+    if (worker == null) {
       throw ValidationException('Invalid identifier or password');
     }
 
-    // Verify password using bcrypt
-    if (!PasswordHasher.verifyPassword(loginDTO.password, user.password)) {
+    if (worker.pinHash == null || worker.pinHash!.isEmpty) {
+      throw ValidationException('PASSWORD_SETUP_REQUIRED');
+    }
+
+    if (!PasswordHasher.verifyPassword(loginDTO.password, worker.pinHash!)) {
       throw ValidationException('Invalid identifier or password');
     }
 
+    await _database.upsertUserFromWorker(worker, worker.pinHash!);
+    final syncedUser = await _database.getUserById(worker.id);
+    return _convertToDTO(syncedUser);
+  }
+
+  Future<Worker?> findWorkerByIdentifier(String identifier) async {
+    return _database.getWorkerByIdentifier(identifier);
+  }
+
+  Future<bool> workerNeedsPasswordSetup(String identifier) async {
+    final worker = await _database.getWorkerByIdentifier(identifier);
+    if (worker == null) return false;
+    return worker.pinHash == null || worker.pinHash!.isEmpty;
+  }
+
+  Future<UserDTO> createPasswordForWorker({
+    required String identifier,
+    required String password,
+  }) async {
+    if (password.length < 6) {
+      throw ValidationException('Password must be at least 6 characters');
+    }
+
+    final worker = await _database.getWorkerByIdentifier(identifier);
+    if (worker == null) {
+      throw ValidationException('Worker not found for this identifier');
+    }
+
+    if (worker.pinHash != null && worker.pinHash!.isNotEmpty) {
+      throw ValidationException('Password already exists for this worker');
+    }
+
+    final hashedPassword = PasswordHasher.hashPassword(password);
+    await _database.setWorkerPasswordHash(worker.id, hashedPassword);
+
+    final updatedWorker = await _database.getWorker(worker.id);
+    if (updatedWorker == null) {
+      throw ServiceException('Failed to update worker password');
+    }
+
+    await _database.upsertUserFromWorker(updatedWorker, hashedPassword);
+    final user = await _database.getUserById(updatedWorker.id);
     return _convertToDTO(user);
   }
 
@@ -126,7 +169,7 @@ class UserService {
 
   /// Get total count of active users
   Future<int> getUsersCount() async {
-    return await _database.getUsersCount();
+    return await _database.getLoginAccountsCount();
   }
 
   /// Clear all users (for fresh manager creation after activation)
@@ -160,5 +203,19 @@ class UserService {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     );
+  }
+
+  Future<User?> _findUserByIdentifier(String identifier) async {
+    final byEmail = await _database.getUserByEmail(identifier);
+    if (byEmail != null && byEmail.deletedAt == null) {
+      return byEmail;
+    }
+
+    final byPhone = await _database.getUserByPhone(identifier);
+    if (byPhone != null && byPhone.deletedAt == null) {
+      return byPhone;
+    }
+
+    return null;
   }
 }
