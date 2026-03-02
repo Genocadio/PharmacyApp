@@ -626,6 +626,8 @@ class SyncService extends ChangeNotifier {
               'itemTotal': s.itemTotal,
               'patientPays': s.patientPays,
               'insurancePays': s.insurancePays,
+              if (s.recordHash != null) 'recordHash': s.recordHash,
+              if (s.hashCreatedAt != null) 'hashCreatedAt': s.hashCreatedAt?.toIso8601String(),
             })
         .toList();
   }

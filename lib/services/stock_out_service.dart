@@ -179,6 +179,10 @@ class StockOutService {
       itemTotal: (item['itemTotal'] as num?)?.toDouble() ?? 0,
       patientPays: (item['patientPays'] as num?)?.toDouble() ?? 0,
       insurancePays: (item['insurancePays'] as num?)?.toDouble() ?? 0,
+      recordHash: item['recordHash']?.toString(),
+      hashCreatedAt: item['hashCreatedAt'] != null
+          ? DateTime.parse(item['hashCreatedAt'].toString())
+          : null,
     );
   }
 
@@ -295,6 +299,7 @@ class StockOutService {
       if (data is! Map<String, dynamic>) {
         throw Exception('Invalid stock-out response payload');
       }
+      // Parse remote response - hash is extracted from backend response
       final created = _parseRemoteStockOut(data);
       _latestCache = [created, ..._latestCache.where((s) => s.id != created.id)];
       return created;

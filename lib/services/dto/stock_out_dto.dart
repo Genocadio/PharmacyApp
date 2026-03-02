@@ -281,6 +281,8 @@ class StockOutItemDTO {
   final double itemTotal;
   final double patientPays;
   final double insurancePays;
+  final String? recordHash; // Hash for inventory movement authenticity
+  final DateTime? hashCreatedAt; // When hash was generated
 
   StockOutItemDTO({
     required this.id,
@@ -295,6 +297,8 @@ class StockOutItemDTO {
     required this.itemTotal,
     required this.patientPays,
     required this.insurancePays,
+    this.recordHash,
+    this.hashCreatedAt,
   });
 
   /// Convert to JSON
@@ -312,7 +316,31 @@ class StockOutItemDTO {
       'itemTotal': itemTotal,
       'patientPays': patientPays,
       'insurancePays': insurancePays,
+      if (recordHash != null) 'recordHash': recordHash,
+      if (hashCreatedAt != null) 'hashCreatedAt': hashCreatedAt?.toIso8601String(),
     };
+  }
+  
+  /// Create from JSON
+  factory StockOutItemDTO.fromJson(Map<String, dynamic> json) {
+    return StockOutItemDTO(
+      id: json['id'] as String,
+      stockInId: json['stockInId'] as String,
+      productName: json['productName'] as String,
+      batchNumber: json['batchNumber'] as String?,
+      location: json['location'] as String?,
+      quantitySold: json['quantitySold'] as int,
+      pricePerUnit: (json['pricePerUnit'] as num).toDouble(),
+      insuranceId: json['insuranceId'] as String?,
+      insuranceName: json['insuranceName'] as String?,
+      itemTotal: (json['itemTotal'] as num).toDouble(),
+      patientPays: (json['patientPays'] as num).toDouble(),
+      insurancePays: (json['insurancePays'] as num).toDouble(),
+      recordHash: json['recordHash'] as String?,
+      hashCreatedAt: json['hashCreatedAt'] != null
+          ? DateTime.parse(json['hashCreatedAt'] as String)
+          : null,
+    );
   }
 }
 
@@ -368,5 +396,28 @@ class StockOutDTO {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
+  }
+  
+  /// Create from JSON
+  factory StockOutDTO.fromJson(Map<String, dynamic> json) {
+    return StockOutDTO(
+      id: json['id'] as String,
+      patientName: json['patientName'] as String,
+      destinationClinicService: json['destinationClinicService'] as String?,
+      insuranceCardNumber: json['insuranceCardNumber'] as String?,
+      issuingCompany: json['issuingCompany'] as String?,
+      prescriberName: json['prescriberName'] as String?,
+      prescriberLicenseId: json['prescriberLicenseId'] as String?,
+      prescribingOrganization: json['prescribingOrganization'] as String?,
+      totalPrice: (json['totalPrice'] as num).toDouble(),
+      stockOutItems: (json['stockOutItems'] as List)
+          .cast<Map<String, dynamic>>()
+          .map((item) => StockOutItemDTO.fromJson(item))
+          .toList(),
+      userId: json['userId'] as String?,
+      userName: json['userName'] as String?,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: DateTime.parse(json['updatedAt'] as String),
+    );
   }
 }

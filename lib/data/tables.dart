@@ -168,8 +168,6 @@ class StockOutSales extends Table {
   TextColumn get prescribingOrganization => text().nullable()();
   RealColumn get totalPrice => real()();
   TextColumn get userId => text().nullable().references(Users, #id)();
-  TextColumn get recordHash => text().nullable()();
-  DateTimeColumn get hashCreatedAt => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get lastSyncedAt => dateTime().nullable()();

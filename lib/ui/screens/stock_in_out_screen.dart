@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'dart:typed_data';
 import 'package:nexxpharma/data/database.dart';
 import 'package:nexxpharma/data/tables.dart';
 import 'package:nexxpharma/services/stock_in_service.dart';
@@ -110,6 +109,77 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
       isWholesale:
           widget.settingsService.deviceType == DeviceType.PHARMACY_WHOLESALE,
     );
+  }
+
+  /// Show invoice preview dialog with pre-generated PDF
+  /// Pre-generating the PDF prevents regeneration when background sync triggers rebuilds
+  Future<void> _showInvoicePreview(StockOutDTO stockOut) async {
+    if (!mounted) return;
+    
+    final size = MediaQuery.sizeOf(context);
+    Uint8List? pdfBytes;
+    String? error;
+    
+    // Show loading dialog while generating PDF
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Dialog(
+        child: Padding(
+          padding: EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Generating invoice...'),
+            ],
+          ),
+        ),
+      ),
+    );
+    
+    try {
+      pdfBytes = await _buildInvoicePdf(stockOut);
+    } catch (e) {
+      error = 'Error generating PDF: $e';
+    }
+    
+    // Close loading dialog
+    if (mounted) Navigator.of(context).pop();
+    
+    if (!mounted) return;
+    
+    // Show PDF preview dialog with cached bytes
+    // Using cached bytes prevents regeneration when services trigger notifyListeners
+    if (pdfBytes != null) {
+      final cachedPdfBytes = pdfBytes; // Capture as non-nullable for closure
+      showDialog(
+        context: context,
+        builder: (dialogContext) {
+          return Dialog(
+            insetPadding: const EdgeInsets.all(20),
+            child: SizedBox(
+              width: size.width * 0.9,
+              height: size.height * 0.85,
+              child: PdfPreview(
+                build: (format) async => cachedPdfBytes,
+                canChangePageFormat: false,
+                canChangeOrientation: false,
+                canDebug: false,
+                actions: const [],
+                pdfFileName: 'invoice.pdf',
+                maxPageWidth: 700,
+              ),
+            ),
+          );
+        },
+      );
+    } else if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error)),
+      );
+    }
   }
 
   /// Check if the device supports multi-user mode
@@ -245,17 +315,17 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
 
   /// Setup listeners for device configuration changes (type, activation, subtype, etc.)
   void _setupChangeListeners() {
-    // Device state listener is now handled by ListenableBuilder in build()
-    // This prevents unnecessary rebuilds from unrelated state changes
-    
-    // Listen only to auth changes for session expiration
-    widget.authService.addListener(_onAuthChanged);
+    // Listen for device configuration changes (type, activation, subtype, etc.)
+    widget.deviceStateManager.addListener(_onDeviceStateChanged);
   }
 
   /// Called when device state changes (type, activation status, module subtype, etc.)
   void _onDeviceStateChanged() {
-    // This method is no longer needed as we use ListenableBuilder
-    // which automatically rebuilds only when deviceStateManager notifies
+    if (mounted) {
+      setState(() {
+        // Rebuild UI with new device state
+      });
+    }
   }
 
   /// Called when authentication state changes (session expiration)
@@ -359,109 +429,102 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
     final theme = Theme.of(context);
     final accentColor = theme.colorScheme.primary;
 
-    // Wrap in ListenableBuilder to ONLY rebuild on device state changes
-    // This prevents rebuilds from sync service and other unrelated listeners
-    return ListenableBuilder(
-      listenable: widget.deviceStateManager,
-      builder: (context, child) {
-        return GestureDetector(
-          onTap: () => widget.authService.updateActivity(),
-          onPanUpdate: (_) => widget.authService.updateActivity(),
-          child: DefaultTabController(
-            length: 2,
-            child: Builder(
-              builder: (context) {
-                final tabController = DefaultTabController.of(context);
-                return Focus(
-                  autofocus: true,
-                  onKeyEvent: (node, event) {
-                    if (_isTextInputFocused()) {
-                      return KeyEventResult.ignored;
-                    }
-                    if (event.logicalKey == LogicalKeyboardKey.arrowLeft &&
-                        event is KeyDownEvent) {
-                      final nextIndex = (tabController.index) - 1;
-                      if (nextIndex >= 0) {
-                        tabController.animateTo(nextIndex);
-                        return KeyEventResult.handled;
-                      }
-                    }
-                    if (event.logicalKey == LogicalKeyboardKey.arrowRight &&
-                        event is KeyDownEvent) {
-                      final nextIndex = (tabController.index) + 1;
-                      if (nextIndex <= 1) {
-                        tabController.animateTo(nextIndex);
-                        return KeyEventResult.handled;
-                      }
-                    }
-                    return KeyEventResult.ignored;
-                  },
-                  child: Scaffold(
-                    body: SafeArea(
-                      child: Column(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              color: theme.brightness == Brightness.light
-                                  ? theme.scaffoldBackgroundColor
-                                  : theme.cardColor,
-                              border: Border(
-                                bottom: BorderSide(
-                                  color: theme.dividerColor.withOpacity(0.1),
-                                ),
-                              ),
-                            ),
-                            child: TabBar(
-                              indicator: UnderlineTabIndicator(
-                                borderSide: BorderSide(
-                                  color: accentColor,
-                                  width: 3,
-                                ),
-                              ),
-                              labelColor: accentColor,
-                              unselectedLabelColor: theme.brightness == Brightness.light
-                                  ? Colors.grey.shade600
-                                  : Colors.grey.shade400,
-                              tabs: [
-                                Tab(
-                                  text: 'Stock In',
-                                  icon: Padding(
-                                    padding: EdgeInsets.only(bottom: 4),
-                                    child: Icon(Icons.inventory_2, size: 20),
-                                  ),
-                                ),
-                                Tab(
-                                  text: 'Stock Out',
-                                  icon: Padding(
-                                    padding: EdgeInsets.only(bottom: 4),
-                                    child: Icon(Icons.receipt_long, size: 20),
-                                  ),
-                                ),
-                              ],
-                              labelPadding: const EdgeInsets.symmetric(horizontal: 16),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Expanded(
-                            child: TabBarView(
-                              children: [
-                                _buildStockInTab(theme, accentColor),
-                                _buildStockOutTab(theme, accentColor),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-                    floatingActionButton: _buildMacDock(theme, accentColor),
-                  ),
-                );
+    return GestureDetector(
+      onTap: () => widget.authService.updateActivity(),
+      onPanUpdate: (_) => widget.authService.updateActivity(),
+      child: DefaultTabController(
+        length: 2,
+        child: Builder(
+          builder: (context) {
+            final tabController = DefaultTabController.of(context);
+            return Focus(
+              autofocus: true,
+              onKeyEvent: (node, event) {
+                if (_isTextInputFocused()) {
+                  return KeyEventResult.ignored;
+                }
+                if (event.logicalKey == LogicalKeyboardKey.arrowLeft &&
+                    event is KeyDownEvent) {
+                  final nextIndex = (tabController.index) - 1;
+                  if (nextIndex >= 0) {
+                    tabController.animateTo(nextIndex);
+                    return KeyEventResult.handled;
+                  }
+                }
+                if (event.logicalKey == LogicalKeyboardKey.arrowRight &&
+                    event is KeyDownEvent) {
+                  final nextIndex = (tabController.index) + 1;
+                  if (nextIndex <= 1) {
+                    tabController.animateTo(nextIndex);
+                    return KeyEventResult.handled;
+                  }
+                }
+                return KeyEventResult.ignored;
               },
-            ),
-          ),
-        );
-      },
+              child: Scaffold(
+                body: SafeArea(
+                  child: Column(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: theme.brightness == Brightness.light
+                              ? theme.scaffoldBackgroundColor
+                              : theme.cardColor,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: theme.dividerColor.withOpacity(0.1),
+                            ),
+                          ),
+                        ),
+                        child: TabBar(
+                          indicator: UnderlineTabIndicator(
+                            borderSide: BorderSide(
+                              color: accentColor,
+                              width: 3,
+                            ),
+                          ),
+                          labelColor: accentColor,
+                          unselectedLabelColor: theme.brightness == Brightness.light
+                              ? Colors.grey.shade600
+                              : Colors.grey.shade400,
+                          tabs: [
+                            Tab(
+                              text: 'Stock In',
+                              icon: Padding(
+                                padding: EdgeInsets.only(bottom: 4),
+                                child: Icon(Icons.inventory_2, size: 20),
+                              ),
+                            ),
+                            Tab(
+                              text: 'Stock Out',
+                              icon: Padding(
+                                padding: EdgeInsets.only(bottom: 4),
+                                child: Icon(Icons.receipt_long, size: 20),
+                              ),
+                            ),
+                          ],
+                          labelPadding: const EdgeInsets.symmetric(horizontal: 16),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: TabBarView(
+                          children: [
+                            _buildStockInTab(theme, accentColor),
+                            _buildStockOutTab(theme, accentColor),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+                floatingActionButton: _buildMacDock(theme, accentColor),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -1259,40 +1322,7 @@ class _StockInOutScreenState extends State<StockInOutScreen> {
                 IconButton(
                   icon: const Icon(Icons.description_outlined),
                   tooltip: 'View Invoice',
-                  onPressed: () async {
-                    if (!mounted) return;
-                    
-                    // Show loading indicator
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) => const Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                    
-                    try {
-                      // Generate PDF
-                      final pdfBytes = await _buildInvoicePdf(stockOut);
-                      
-                      if (!mounted) return;
-                      
-                      // Close loading indicator
-                      Navigator.of(context).pop();
-                      
-                      // Show PDF in isolated dialog
-                      await showDialog(
-                        context: context,
-                        builder: (context) => _IsolatedPdfViewerDialog(
-                          pdfBytes: pdfBytes,
-                        ),
-                      );
-                    } catch (e) {
-                      if (!mounted) return;
-                      Navigator.of(context).pop(); // Close loading
-                      Toast.error('Error generating PDF: $e');
-                    }
-                  },
+                  onPressed: () => _showInvoicePreview(stockOut),
                 ),
                 IconButton(
                   icon: const Icon(Icons.print_outlined),
@@ -6354,51 +6384,6 @@ class _StockOutFlowState extends State<_StockOutFlow> {
           color: textColor,
           fontSize: 12,
           fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-}
-
-/// Isolated PDF viewer dialog that maintains its own state
-/// This prevents the PDF from regenerating when background sync or other
-/// parent widget rebuilds occur
-class _IsolatedPdfViewerDialog extends StatefulWidget {
-  final Uint8List pdfBytes;
-
-  const _IsolatedPdfViewerDialog({required this.pdfBytes});
-
-  @override
-  State<_IsolatedPdfViewerDialog> createState() => _IsolatedPdfViewerDialogState();
-}
-
-class _IsolatedPdfViewerDialogState extends State<_IsolatedPdfViewerDialog> {
-  late final Uint8List _pdfBytes;
-
-  @override
-  void initState() {
-    super.initState();
-    // Store PDF bytes in state - this won't change even if parent rebuilds
-    _pdfBytes = widget.pdfBytes;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
-    
-    return Dialog(
-      insetPadding: const EdgeInsets.all(20),
-      child: SizedBox(
-        width: size.width * 0.9,
-        height: size.height * 0.85,
-        child: PdfPreview(
-          build: (format) async => _pdfBytes,
-          canChangePageFormat: false,
-          canChangeOrientation: false,
-          canDebug: false,
-          actions: const [],
-          pdfFileName: 'invoice.pdf',
-          maxPageWidth: 700,
         ),
       ),
     );
