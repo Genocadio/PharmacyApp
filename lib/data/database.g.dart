@@ -3990,6 +3990,29 @@ class $StockOutSalesTable extends StockOutSales
       'REFERENCES users (id)',
     ),
   );
+  static const VerificationMeta _recordHashMeta = const VerificationMeta(
+    'recordHash',
+  );
+  @override
+  late final GeneratedColumn<String> recordHash = GeneratedColumn<String>(
+    'record_hash',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _hashCreatedAtMeta = const VerificationMeta(
+    'hashCreatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> hashCreatedAt =
+      GeneratedColumn<DateTime>(
+        'hash_created_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -4039,6 +4062,8 @@ class $StockOutSalesTable extends StockOutSales
     prescribingOrganization,
     totalPrice,
     userId,
+    recordHash,
+    hashCreatedAt,
     createdAt,
     updatedAt,
     lastSyncedAt,
@@ -4161,6 +4186,21 @@ class $StockOutSalesTable extends StockOutSales
         userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta),
       );
     }
+    if (data.containsKey('record_hash')) {
+      context.handle(
+        _recordHashMeta,
+        recordHash.isAcceptableOrUnknown(data['record_hash']!, _recordHashMeta),
+      );
+    }
+    if (data.containsKey('hash_created_at')) {
+      context.handle(
+        _hashCreatedAtMeta,
+        hashCreatedAt.isAcceptableOrUnknown(
+          data['hash_created_at']!,
+          _hashCreatedAtMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -4239,6 +4279,14 @@ class $StockOutSalesTable extends StockOutSales
         DriftSqlType.string,
         data['${effectivePrefix}user_id'],
       ),
+      recordHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}record_hash'],
+      ),
+      hashCreatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}hash_created_at'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -4273,6 +4321,8 @@ class StockOutSale extends DataClass implements Insertable<StockOutSale> {
   final String? prescribingOrganization;
   final double totalPrice;
   final String? userId;
+  final String? recordHash;
+  final DateTime? hashCreatedAt;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? lastSyncedAt;
@@ -4289,6 +4339,8 @@ class StockOutSale extends DataClass implements Insertable<StockOutSale> {
     this.prescribingOrganization,
     required this.totalPrice,
     this.userId,
+    this.recordHash,
+    this.hashCreatedAt,
     required this.createdAt,
     required this.updatedAt,
     this.lastSyncedAt,
@@ -4326,6 +4378,12 @@ class StockOutSale extends DataClass implements Insertable<StockOutSale> {
     if (!nullToAbsent || userId != null) {
       map['user_id'] = Variable<String>(userId);
     }
+    if (!nullToAbsent || recordHash != null) {
+      map['record_hash'] = Variable<String>(recordHash);
+    }
+    if (!nullToAbsent || hashCreatedAt != null) {
+      map['hash_created_at'] = Variable<DateTime>(hashCreatedAt);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || lastSyncedAt != null) {
@@ -4362,6 +4420,12 @@ class StockOutSale extends DataClass implements Insertable<StockOutSale> {
       userId: userId == null && nullToAbsent
           ? const Value.absent()
           : Value(userId),
+      recordHash: recordHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recordHash),
+      hashCreatedAt: hashCreatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(hashCreatedAt),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       lastSyncedAt: lastSyncedAt == null && nullToAbsent
@@ -4396,6 +4460,8 @@ class StockOutSale extends DataClass implements Insertable<StockOutSale> {
       ),
       totalPrice: serializer.fromJson<double>(json['totalPrice']),
       userId: serializer.fromJson<String?>(json['userId']),
+      recordHash: serializer.fromJson<String?>(json['recordHash']),
+      hashCreatedAt: serializer.fromJson<DateTime?>(json['hashCreatedAt']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       lastSyncedAt: serializer.fromJson<DateTime?>(json['lastSyncedAt']),
@@ -4421,6 +4487,8 @@ class StockOutSale extends DataClass implements Insertable<StockOutSale> {
       ),
       'totalPrice': serializer.toJson<double>(totalPrice),
       'userId': serializer.toJson<String?>(userId),
+      'recordHash': serializer.toJson<String?>(recordHash),
+      'hashCreatedAt': serializer.toJson<DateTime?>(hashCreatedAt),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'lastSyncedAt': serializer.toJson<DateTime?>(lastSyncedAt),
@@ -4440,6 +4508,8 @@ class StockOutSale extends DataClass implements Insertable<StockOutSale> {
     Value<String?> prescribingOrganization = const Value.absent(),
     double? totalPrice,
     Value<String?> userId = const Value.absent(),
+    Value<String?> recordHash = const Value.absent(),
+    Value<DateTime?> hashCreatedAt = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> lastSyncedAt = const Value.absent(),
@@ -4468,6 +4538,10 @@ class StockOutSale extends DataClass implements Insertable<StockOutSale> {
         : this.prescribingOrganization,
     totalPrice: totalPrice ?? this.totalPrice,
     userId: userId.present ? userId.value : this.userId,
+    recordHash: recordHash.present ? recordHash.value : this.recordHash,
+    hashCreatedAt: hashCreatedAt.present
+        ? hashCreatedAt.value
+        : this.hashCreatedAt,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     lastSyncedAt: lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
@@ -4506,6 +4580,12 @@ class StockOutSale extends DataClass implements Insertable<StockOutSale> {
           ? data.totalPrice.value
           : this.totalPrice,
       userId: data.userId.present ? data.userId.value : this.userId,
+      recordHash: data.recordHash.present
+          ? data.recordHash.value
+          : this.recordHash,
+      hashCreatedAt: data.hashCreatedAt.present
+          ? data.hashCreatedAt.value
+          : this.hashCreatedAt,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       lastSyncedAt: data.lastSyncedAt.present
@@ -4529,6 +4609,8 @@ class StockOutSale extends DataClass implements Insertable<StockOutSale> {
           ..write('prescribingOrganization: $prescribingOrganization, ')
           ..write('totalPrice: $totalPrice, ')
           ..write('userId: $userId, ')
+          ..write('recordHash: $recordHash, ')
+          ..write('hashCreatedAt: $hashCreatedAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('lastSyncedAt: $lastSyncedAt')
@@ -4550,6 +4632,8 @@ class StockOutSale extends DataClass implements Insertable<StockOutSale> {
     prescribingOrganization,
     totalPrice,
     userId,
+    recordHash,
+    hashCreatedAt,
     createdAt,
     updatedAt,
     lastSyncedAt,
@@ -4570,6 +4654,8 @@ class StockOutSale extends DataClass implements Insertable<StockOutSale> {
           other.prescribingOrganization == this.prescribingOrganization &&
           other.totalPrice == this.totalPrice &&
           other.userId == this.userId &&
+          other.recordHash == this.recordHash &&
+          other.hashCreatedAt == this.hashCreatedAt &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.lastSyncedAt == this.lastSyncedAt);
@@ -4588,6 +4674,8 @@ class StockOutSalesCompanion extends UpdateCompanion<StockOutSale> {
   final Value<String?> prescribingOrganization;
   final Value<double> totalPrice;
   final Value<String?> userId;
+  final Value<String?> recordHash;
+  final Value<DateTime?> hashCreatedAt;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> lastSyncedAt;
@@ -4605,6 +4693,8 @@ class StockOutSalesCompanion extends UpdateCompanion<StockOutSale> {
     this.prescribingOrganization = const Value.absent(),
     this.totalPrice = const Value.absent(),
     this.userId = const Value.absent(),
+    this.recordHash = const Value.absent(),
+    this.hashCreatedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
@@ -4623,6 +4713,8 @@ class StockOutSalesCompanion extends UpdateCompanion<StockOutSale> {
     this.prescribingOrganization = const Value.absent(),
     required double totalPrice,
     this.userId = const Value.absent(),
+    this.recordHash = const Value.absent(),
+    this.hashCreatedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
@@ -4645,6 +4737,8 @@ class StockOutSalesCompanion extends UpdateCompanion<StockOutSale> {
     Expression<String>? prescribingOrganization,
     Expression<double>? totalPrice,
     Expression<String>? userId,
+    Expression<String>? recordHash,
+    Expression<DateTime>? hashCreatedAt,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? lastSyncedAt,
@@ -4667,6 +4761,8 @@ class StockOutSalesCompanion extends UpdateCompanion<StockOutSale> {
         'prescribing_organization': prescribingOrganization,
       if (totalPrice != null) 'total_price': totalPrice,
       if (userId != null) 'user_id': userId,
+      if (recordHash != null) 'record_hash': recordHash,
+      if (hashCreatedAt != null) 'hash_created_at': hashCreatedAt,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
@@ -4687,6 +4783,8 @@ class StockOutSalesCompanion extends UpdateCompanion<StockOutSale> {
     Value<String?>? prescribingOrganization,
     Value<double>? totalPrice,
     Value<String?>? userId,
+    Value<String?>? recordHash,
+    Value<DateTime?>? hashCreatedAt,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? lastSyncedAt,
@@ -4707,6 +4805,8 @@ class StockOutSalesCompanion extends UpdateCompanion<StockOutSale> {
           prescribingOrganization ?? this.prescribingOrganization,
       totalPrice: totalPrice ?? this.totalPrice,
       userId: userId ?? this.userId,
+      recordHash: recordHash ?? this.recordHash,
+      hashCreatedAt: hashCreatedAt ?? this.hashCreatedAt,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
@@ -4761,6 +4861,12 @@ class StockOutSalesCompanion extends UpdateCompanion<StockOutSale> {
     if (userId.present) {
       map['user_id'] = Variable<String>(userId.value);
     }
+    if (recordHash.present) {
+      map['record_hash'] = Variable<String>(recordHash.value);
+    }
+    if (hashCreatedAt.present) {
+      map['hash_created_at'] = Variable<DateTime>(hashCreatedAt.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -4791,6 +4897,8 @@ class StockOutSalesCompanion extends UpdateCompanion<StockOutSale> {
           ..write('prescribingOrganization: $prescribingOrganization, ')
           ..write('totalPrice: $totalPrice, ')
           ..write('userId: $userId, ')
+          ..write('recordHash: $recordHash, ')
+          ..write('hashCreatedAt: $hashCreatedAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
@@ -12393,6 +12501,8 @@ typedef $$StockOutSalesTableCreateCompanionBuilder =
       Value<String?> prescribingOrganization,
       required double totalPrice,
       Value<String?> userId,
+      Value<String?> recordHash,
+      Value<DateTime?> hashCreatedAt,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<DateTime?> lastSyncedAt,
@@ -12412,6 +12522,8 @@ typedef $$StockOutSalesTableUpdateCompanionBuilder =
       Value<String?> prescribingOrganization,
       Value<double> totalPrice,
       Value<String?> userId,
+      Value<String?> recordHash,
+      Value<DateTime?> hashCreatedAt,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<DateTime?> lastSyncedAt,
@@ -12520,6 +12632,16 @@ class $$StockOutSalesTableFilterComposer
 
   ColumnFilters<double> get totalPrice => $composableBuilder(
     column: $table.totalPrice,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recordHash => $composableBuilder(
+    column: $table.recordHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get hashCreatedAt => $composableBuilder(
+    column: $table.hashCreatedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12644,6 +12766,16 @@ class $$StockOutSalesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get recordHash => $composableBuilder(
+    column: $table.recordHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get hashCreatedAt => $composableBuilder(
+    column: $table.hashCreatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -12763,6 +12895,16 @@ class $$StockOutSalesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get recordHash => $composableBuilder(
+    column: $table.recordHash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get hashCreatedAt => $composableBuilder(
+    column: $table.hashCreatedAt,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -12861,6 +13003,8 @@ class $$StockOutSalesTableTableManager
                 Value<String?> prescribingOrganization = const Value.absent(),
                 Value<double> totalPrice = const Value.absent(),
                 Value<String?> userId = const Value.absent(),
+                Value<String?> recordHash = const Value.absent(),
+                Value<DateTime?> hashCreatedAt = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> lastSyncedAt = const Value.absent(),
@@ -12878,6 +13022,8 @@ class $$StockOutSalesTableTableManager
                 prescribingOrganization: prescribingOrganization,
                 totalPrice: totalPrice,
                 userId: userId,
+                recordHash: recordHash,
+                hashCreatedAt: hashCreatedAt,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 lastSyncedAt: lastSyncedAt,
@@ -12897,6 +13043,8 @@ class $$StockOutSalesTableTableManager
                 Value<String?> prescribingOrganization = const Value.absent(),
                 required double totalPrice,
                 Value<String?> userId = const Value.absent(),
+                Value<String?> recordHash = const Value.absent(),
+                Value<DateTime?> hashCreatedAt = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> lastSyncedAt = const Value.absent(),
@@ -12914,6 +13062,8 @@ class $$StockOutSalesTableTableManager
                 prescribingOrganization: prescribingOrganization,
                 totalPrice: totalPrice,
                 userId: userId,
+                recordHash: recordHash,
+                hashCreatedAt: hashCreatedAt,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 lastSyncedAt: lastSyncedAt,

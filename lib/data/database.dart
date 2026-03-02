@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:uuid/uuid.dart';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'tables.dart';
 import 'package:nexxpharma/services/dto/activation_dto.dart';
 
@@ -28,7 +30,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration {
@@ -54,6 +56,11 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(paymentMethods);
           await m.createTable(workers);
         }
+        if (from < 12) {
+          // Add hash columns to stock_out_sales table
+          await m.addColumn(stockOutSales, stockOutSales.recordHash);
+          await m.addColumn(stockOutSales, stockOutSales.hashCreatedAt);
+        }
       },
     );
   }
@@ -64,6 +71,33 @@ class AppDatabase extends _$AppDatabase {
 
   // UUID generator
   final _uuid = const Uuid();
+
+  /// Generate SHA-256 hash for stock out sale record
+  /// Used for change detection and integrity verification
+  String _computeStockOutSaleHash(StockOutSalesCompanion sale) {
+    final data = {
+      'id': sale.id.value,
+      'transactionId': sale.transactionId.value,
+      'patientName': sale.patientName.value,
+      'destinationClinicService': sale.destinationClinicService.value,
+      'insuranceCardNumber': sale.insuranceCardNumber.value,
+      'issuingCompany': sale.issuingCompany.value,
+      'prescriberName': sale.prescriberName.value,
+      'prescriberLicenseId': sale.prescriberLicenseId.value,
+      'prescribingOrganization': sale.prescribingOrganization.value,
+      'totalPrice': sale.totalPrice.value,
+    };
+    
+    // Sort keys for consistent hash
+    final sortedKeys = data.keys.toList()..sort();
+    final canonical = sortedKeys
+        .map((k) => '$k:${data[k]}')
+        .join('|');
+    
+    final bytes = utf8.encode(canonical);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
 
   // ==================== Insurance CRUD ====================
 
@@ -771,7 +805,14 @@ class AppDatabase extends _$AppDatabase {
       updatedAt: Value(now),
     );
 
-    await into(stockOutSales).insert(companion);
+    // Generate and add hash
+    final hash = _computeStockOutSaleHash(companion);
+    final companionWithHash = companion.copyWith(
+      recordHash: Value(hash),
+      hashCreatedAt: Value(now),
+    );
+
+    await into(stockOutSales).insert(companionWithHash);
     return getStockOutSaleById(id);
   }
 
@@ -826,6 +867,8 @@ class AppDatabase extends _$AppDatabase {
     String? prescriberLicenseId,
     String? prescribingOrganization,
   }) async {
+    final now = DateTime.now();
+    
     final updates = StockOutSalesCompanion(
       id: Value(id),
       transactionId: transactionId != null
@@ -853,12 +896,19 @@ class AppDatabase extends _$AppDatabase {
       prescribingOrganization: prescribingOrganization != null
           ? Value(prescribingOrganization)
           : const Value.absent(),
-      updatedAt: Value(DateTime.now()),
+      updatedAt: Value(now),
+    );
+
+    // Regenerate hash on update
+    final hash = _computeStockOutSaleHash(updates);
+    final updatesWithHash = updates.copyWith(
+      recordHash: Value(hash),
+      hashCreatedAt: Value(now),
     );
 
     return await (update(
           stockOutSales,
-        )..where((t) => t.id.equals(id))).write(updates) >
+        )..where((t) => t.id.equals(id))).write(updatesWithHash) >
         0;
   }
 
