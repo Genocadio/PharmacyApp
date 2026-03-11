@@ -1,7 +1,7 @@
-import 'package:nexxpharma/data/database.dart';
-import 'package:nexxpharma/data/tables.dart';
-import 'package:nexxpharma/services/dto/user_dto.dart';
-import 'package:nexxpharma/services/user_service.dart';
+import 'package:nexxstore/data/database.dart';
+import 'package:nexxstore/data/tables.dart';
+import 'package:nexxstore/services/dto/user_dto.dart';
+import 'package:nexxstore/services/user_service.dart';
 
 /// Example function demonstrating how to use the UserService
 void runUserManagementExample(AppDatabase database) async {

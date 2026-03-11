@@ -1,5 +1,5 @@
-import 'package:nexxpharma/data/database.dart';
-import 'package:nexxpharma/data/tables.dart';
+import 'package:nexxstore/data/database.dart';
+import 'package:nexxstore/data/tables.dart';
 
 /// Example usage of the AppDatabase
 /// This demonstrates all CRUD operations for Insurance, Product, and ProductInsurance

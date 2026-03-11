@@ -2,8 +2,8 @@ import 'dart:typed_data';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:nexxpharma/services/dto/stock_out_dto.dart';
-import 'package:nexxpharma/services/settings_service.dart';
+import 'package:nexxstore/services/dto/stock_out_dto.dart';
+import 'package:nexxstore/services/settings_service.dart';
 import 'package:http/http.dart' as http;
 
 /// Simple module info class for invoice generation

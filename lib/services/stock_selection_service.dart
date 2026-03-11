@@ -1,6 +1,6 @@
 /// Service for intelligent stock selection with FEFO algorithm
-import 'package:nexxpharma/data/database.dart';
-import 'package:nexxpharma/services/dto/stock_selection_dto.dart';
+import 'package:nexxstore/data/database.dart';
+import 'package:nexxstore/services/dto/stock_selection_dto.dart';
 
 class StockSelectionService {
   final AppDatabase _database;

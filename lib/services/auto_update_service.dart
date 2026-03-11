@@ -262,9 +262,9 @@ class AutoUpdateService extends ChangeNotifier {
       return false;
     }
 
-    // Find the zip asset (nexxpharma-VERSION.zip)
+    // Find the zip asset (nexxstore-VERSION.zip)
     final zipAsset = _latestRelease!.assets.firstWhere(
-      (asset) => asset.name.endsWith('.zip') && asset.name.contains('nexxpharma'),
+      (asset) => asset.name.endsWith('.zip') && asset.name.contains('nexxstore'),
       orElse: () => throw Exception('Update zip file not found in release'),
     );
 
@@ -285,7 +285,7 @@ class AutoUpdateService extends ChangeNotifier {
 
       // Save to temp directory
       final tempDir = Directory.systemTemp;
-      final zipFileName = 'nexxpharma_update_${_latestRelease!.version}.zip';
+      final zipFileName = 'nexxstore_update_${_latestRelease!.version}.zip';
       final zipFile = File(path.join(tempDir.path, zipFileName));
 
       final sink = zipFile.openWrite();

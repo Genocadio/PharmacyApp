@@ -1,5 +1,5 @@
-import 'package:nexxpharma/data/database.dart';
-import 'package:nexxpharma/data/tables.dart';
+import 'package:nexxstore/data/database.dart';
+import 'package:nexxstore/data/tables.dart';
 
 /// Example demonstrating data import from server
 /// Shows how to import complete data with existing IDs and timestamps

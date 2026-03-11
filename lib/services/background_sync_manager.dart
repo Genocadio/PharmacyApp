@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:nexxpharma/services/sync_service.dart';
-import 'package:nexxpharma/services/activation_service.dart';
-import 'package:nexxpharma/services/connectivity_service.dart';
-import 'package:nexxpharma/services/settings_service.dart';
-import 'package:nexxpharma/ui/widgets/toast.dart';
+import 'package:nexxstore/services/sync_service.dart';
+import 'package:nexxstore/services/activation_service.dart';
+import 'package:nexxstore/services/connectivity_service.dart';
+import 'package:nexxstore/services/settings_service.dart';
+import 'package:nexxstore/ui/widgets/toast.dart';
 
 /// Manages autonomous background syncing and status checks
 class BackgroundSyncManager extends ChangeNotifier {

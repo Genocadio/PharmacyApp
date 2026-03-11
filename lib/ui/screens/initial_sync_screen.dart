@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nexxpharma/services/sync_service.dart';
+import 'package:nexxstore/services/sync_service.dart';
 
 class InitialSyncScreen extends StatefulWidget {
   final SyncService syncService;

@@ -3,9 +3,9 @@
 // This file demonstrates how to update your services to trigger
 // automatic sync-out operations after data changes.
 
-import 'package:nexxpharma/data/database.dart';
-import 'package:nexxpharma/services/dto/stock_in_dto.dart';
-import 'package:nexxpharma/services/background_sync_manager.dart';
+import 'package:nexxstore/data/database.dart';
+import 'package:nexxstore/services/dto/stock_in_dto.dart';
+import 'package:nexxstore/services/background_sync_manager.dart';
 
 /// Example: StockInService with autonomous sync integration
 class StockInServiceWithSync {

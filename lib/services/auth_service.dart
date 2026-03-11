@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
-import 'package:nexxpharma/services/dto/user_dto.dart';
-import 'package:nexxpharma/services/user_service.dart';
-import 'package:nexxpharma/services/exceptions/service_exceptions.dart';
+import 'package:nexxstore/services/dto/user_dto.dart';
+import 'package:nexxstore/services/user_service.dart';
+import 'package:nexxstore/services/exceptions/service_exceptions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 

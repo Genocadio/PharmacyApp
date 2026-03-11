@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
-import 'package:nexxpharma/data/database.dart';
-import 'package:nexxpharma/data/tables.dart';
-import 'package:nexxpharma/services/settings_service.dart';
-import 'package:nexxpharma/services/activation_service.dart';
+import 'package:nexxstore/data/database.dart';
+import 'package:nexxstore/data/tables.dart';
+import 'package:nexxstore/services/settings_service.dart';
+import 'package:nexxstore/services/activation_service.dart';
 
 /// Manages and notifies about device state changes (type, activation, subtype, etc)
 /// This service consolidates all device configuration changes into a single notification source

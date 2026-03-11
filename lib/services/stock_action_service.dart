@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:nexxpharma/services/dto/stock_in_dto.dart';
+import 'package:nexxstore/services/dto/stock_in_dto.dart';
 
 /// Represents the state of an action (Edit/Delete capability)
 enum ActionState {

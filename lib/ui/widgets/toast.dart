@@ -1,4 +1,4 @@
-import 'package:nexxpharma/services/notification_service.dart';
+import 'package:nexxstore/services/notification_service.dart';
 
 /// Global toast utility for easy access throughout the app
 /// Similar to React Toastify's toast() function

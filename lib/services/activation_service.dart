@@ -6,12 +6,12 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:nexxpharma/data/database.dart';
-import 'package:nexxpharma/services/dto/activation_dto.dart';
-import 'package:nexxpharma/services/settings_service.dart';
-import 'package:nexxpharma/services/notification_service.dart';
-import 'package:nexxpharma/services/auth_service.dart';
-import 'package:nexxpharma/data/tables.dart';
+import 'package:nexxstore/data/database.dart';
+import 'package:nexxstore/services/dto/activation_dto.dart';
+import 'package:nexxstore/services/settings_service.dart';
+import 'package:nexxstore/services/notification_service.dart';
+import 'package:nexxstore/services/auth_service.dart';
+import 'package:nexxstore/data/tables.dart';
 
 class ActivationService extends ChangeNotifier {
   final AppDatabase _db;

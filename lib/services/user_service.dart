@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
-import 'package:nexxpharma/data/database.dart';
-import 'package:nexxpharma/services/dto/user_dto.dart';
-import 'package:nexxpharma/services/exceptions/service_exceptions.dart';
-import 'package:nexxpharma/services/utils/password_hasher.dart';
+import 'package:nexxstore/data/database.dart';
+import 'package:nexxstore/services/dto/user_dto.dart';
+import 'package:nexxstore/services/exceptions/service_exceptions.dart';
+import 'package:nexxstore/services/utils/password_hasher.dart';
 
 /// Service layer for User management
 class UserService {

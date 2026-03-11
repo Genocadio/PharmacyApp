@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'package:nexxpharma/services/sync_service.dart';
-import 'package:nexxpharma/services/notification_service.dart';
+import 'package:nexxstore/services/sync_service.dart';
+import 'package:nexxstore/services/notification_service.dart';
 
 /// Represents a background sync session
 class SyncSession {

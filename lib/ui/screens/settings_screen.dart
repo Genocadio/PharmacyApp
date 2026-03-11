@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io' show Platform;
-import 'package:nexxpharma/data/tables.dart';
-import 'package:nexxpharma/services/activation_service.dart';
-import 'package:nexxpharma/services/auth_service.dart';
-import 'package:nexxpharma/services/auto_update_service.dart';
-import 'package:nexxpharma/services/settings_service.dart';
-import 'package:nexxpharma/services/sync_service.dart';
-import 'package:nexxpharma/ui/widgets/toast.dart';
+import 'package:nexxstore/data/tables.dart';
+import 'package:nexxstore/services/activation_service.dart';
+import 'package:nexxstore/services/auth_service.dart';
+import 'package:nexxstore/services/auto_update_service.dart';
+import 'package:nexxstore/services/settings_service.dart';
+import 'package:nexxstore/services/sync_service.dart';
+import 'package:nexxstore/ui/widgets/toast.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class SettingsScreen extends StatefulWidget {

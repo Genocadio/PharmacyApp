@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:nexxpharma/services/sync_session_manager.dart';
-import 'package:nexxpharma/services/sync_service.dart';
+import 'package:nexxstore/services/sync_session_manager.dart';
+import 'package:nexxstore/services/sync_service.dart';
 
 /// Enhanced sync progress widget with background session support
 class SyncProgressWidget extends StatelessWidget {

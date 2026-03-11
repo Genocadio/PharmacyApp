@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
-import 'package:nexxpharma/data/database.dart';
-import 'package:nexxpharma/services/auth_service.dart';
-import 'package:nexxpharma/services/auto_update_service.dart';
-import 'package:nexxpharma/services/settings_service.dart';
-import 'package:nexxpharma/services/user_service.dart';
-import 'package:nexxpharma/services/sync_service.dart';
-import 'package:nexxpharma/services/stock_in_service.dart';
-import 'package:nexxpharma/services/stock_out_service.dart';
-import 'package:nexxpharma/services/notification_service.dart';
-import 'package:nexxpharma/services/connectivity_service.dart';
-import 'package:nexxpharma/services/background_sync_manager.dart';
-import 'package:nexxpharma/services/device_state_manager.dart';
-import 'package:nexxpharma/ui/screens/login_screen.dart';
-import 'package:nexxpharma/ui/screens/stock_in_out_screen.dart';
-import 'package:nexxpharma/ui/screens/activation_screen.dart';
-import 'package:nexxpharma/services/activation_service.dart';
-import 'package:nexxpharma/ui/widgets/toast_overlay.dart';
+import 'package:nexxstore/data/database.dart';
+import 'package:nexxstore/services/auth_service.dart';
+import 'package:nexxstore/services/auto_update_service.dart';
+import 'package:nexxstore/services/settings_service.dart';
+import 'package:nexxstore/services/user_service.dart';
+import 'package:nexxstore/services/sync_service.dart';
+import 'package:nexxstore/services/stock_in_service.dart';
+import 'package:nexxstore/services/stock_out_service.dart';
+import 'package:nexxstore/services/notification_service.dart';
+import 'package:nexxstore/services/connectivity_service.dart';
+import 'package:nexxstore/services/background_sync_manager.dart';
+import 'package:nexxstore/services/device_state_manager.dart';
+import 'package:nexxstore/ui/screens/login_screen.dart';
+import 'package:nexxstore/ui/screens/stock_in_out_screen.dart';
+import 'package:nexxstore/ui/screens/activation_screen.dart';
+import 'package:nexxstore/services/activation_service.dart';
+import 'package:nexxstore/ui/widgets/toast_overlay.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stack_trace/stack_trace.dart';
 
@@ -144,7 +144,7 @@ Future<bool> _acquireSingleInstanceLock() async {
     return true;
   }
 
-  final lockFile = File('${Directory.systemTemp.path}/nexxpharma.lock');
+  final lockFile = File('${Directory.systemTemp.path}/nexxstore.lock');
   try {
     final raf = await lockFile.open(mode: FileMode.write);
     await raf.lock(FileLock.exclusive);

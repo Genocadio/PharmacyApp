@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nexxpharma/services/notification_service.dart';
+import 'package:nexxstore/services/notification_service.dart';
 
 /// Individual toast notification widget
 /// Slides in from the left side

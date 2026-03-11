@@ -3,10 +3,10 @@ import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:crypton/crypton.dart';
-import 'package:nexxpharma/data/database.dart';
-import 'package:nexxpharma/data/tables.dart';
-import 'package:nexxpharma/services/settings_service.dart';
-import 'package:nexxpharma/services/dto/activation_dto.dart';
+import 'package:nexxstore/data/database.dart';
+import 'package:nexxstore/data/tables.dart';
+import 'package:nexxstore/services/settings_service.dart';
+import 'package:nexxstore/services/dto/activation_dto.dart';
 
 enum SyncStatus { idle, syncing, success, error }
 
@@ -626,8 +626,6 @@ class SyncService extends ChangeNotifier {
               'itemTotal': s.itemTotal,
               'patientPays': s.patientPays,
               'insurancePays': s.insurancePays,
-              if (s.recordHash != null) 'recordHash': s.recordHash,
-              if (s.hashCreatedAt != null) 'hashCreatedAt': s.hashCreatedAt?.toIso8601String(),
             })
         .toList();
   }

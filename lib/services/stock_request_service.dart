@@ -1,8 +1,8 @@
 import 'package:drift/drift.dart';
 import 'package:intl/intl.dart';
-import 'package:nexxpharma/data/database.dart';
-import 'package:nexxpharma/data/tables.dart';
-import 'package:nexxpharma/services/dto/stock_request_dto.dart';
+import 'package:nexxstore/data/database.dart';
+import 'package:nexxstore/data/tables.dart';
+import 'package:nexxstore/services/dto/stock_request_dto.dart';
 import 'package:uuid/uuid.dart';
 
 /// Service for managing stock requests

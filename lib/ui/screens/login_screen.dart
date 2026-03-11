@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:nexxpharma/services/auth_service.dart';
-import 'package:nexxpharma/ui/widgets/toast.dart';
+import 'package:nexxstore/services/auth_service.dart';
+import 'package:nexxstore/ui/widgets/toast.dart';
 
 class LoginScreen extends StatefulWidget {
   final AuthService authService;

@@ -1,4 +1,4 @@
-import 'package:nexxpharma/data/database.dart';
+import 'package:nexxstore/data/database.dart';
 
 /// Represents a single stock-in entry with metadata for UI display
 class StockEntryView {

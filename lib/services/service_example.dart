@@ -1,13 +1,13 @@
-import 'package:nexxpharma/data/database.dart';
-import 'package:nexxpharma/data/tables.dart';
-import 'package:nexxpharma/services/dto/stock_dto.dart';
-import 'package:nexxpharma/services/dto/sale_dto.dart';
-import 'package:nexxpharma/services/dto/product_dto.dart';
-import 'package:nexxpharma/services/dto/insurance_dto.dart';
-import 'package:nexxpharma/services/stock_service.dart';
-import 'package:nexxpharma/services/sale_service.dart';
-import 'package:nexxpharma/services/product_service.dart';
-import 'package:nexxpharma/services/insurance_service.dart';
+import 'package:nexxstore/data/database.dart';
+import 'package:nexxstore/data/tables.dart';
+import 'package:nexxstore/services/dto/stock_dto.dart';
+import 'package:nexxstore/services/dto/sale_dto.dart';
+import 'package:nexxstore/services/dto/product_dto.dart';
+import 'package:nexxstore/services/dto/insurance_dto.dart';
+import 'package:nexxstore/services/stock_service.dart';
+import 'package:nexxstore/services/sale_service.dart';
+import 'package:nexxstore/services/product_service.dart';
+import 'package:nexxstore/services/insurance_service.dart';
 
 /// Example demonstrating the service layer usage
 void main() async {

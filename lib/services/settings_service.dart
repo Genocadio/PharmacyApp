@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:nexxpharma/data/tables.dart';
+import 'package:nexxstore/data/tables.dart';
 
 enum InvoicePaperSize { a4, mm80, mm57 }
 

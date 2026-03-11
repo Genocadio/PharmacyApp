@@ -1,4 +1,4 @@
-import 'package:nexxpharma/data/tables.dart';
+import 'package:nexxstore/data/tables.dart';
 
 /// DTO for creating or updating stock in
 class StockInCreateDTO {

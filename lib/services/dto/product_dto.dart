@@ -1,5 +1,5 @@
-import 'package:nexxpharma/data/tables.dart';
-import 'package:nexxpharma/services/dto/insurance_dto.dart';
+import 'package:nexxstore/data/tables.dart';
+import 'package:nexxstore/services/dto/insurance_dto.dart';
 
 /// Data Transfer Objects for Product operations
 

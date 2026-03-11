@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:nexxpharma/services/sync_service.dart';
-import 'package:nexxpharma/ui/widgets/toast.dart';
+import 'package:nexxstore/services/sync_service.dart';
+import 'package:nexxstore/ui/widgets/toast.dart';
 
 /// Button and dialog for triggering device sync-out operations
 class SyncOutButton extends StatelessWidget {

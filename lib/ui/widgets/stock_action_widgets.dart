@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nexxpharma/services/stock_action_service.dart';
+import 'package:nexxstore/services/stock_action_service.dart';
 
 /// Widget to display action buttons with time-based availability
 class StockActionCell extends StatelessWidget {

@@ -1,7 +1,7 @@
-import 'package:nexxpharma/data/database.dart';
-import 'package:nexxpharma/services/dto/product_dto.dart';
-import 'package:nexxpharma/services/dto/insurance_dto.dart';
-import 'package:nexxpharma/services/exceptions/service_exceptions.dart';
+import 'package:nexxstore/data/database.dart';
+import 'package:nexxstore/services/dto/product_dto.dart';
+import 'package:nexxstore/services/dto/insurance_dto.dart';
+import 'package:nexxstore/services/exceptions/service_exceptions.dart';
 
 /// Service layer for Product management
 class ProductService {

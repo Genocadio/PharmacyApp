@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:nexxpharma/services/auth_service.dart';
-import 'package:nexxpharma/services/dto/user_dto.dart';
-import 'package:nexxpharma/data/tables.dart';
-import 'package:nexxpharma/ui/widgets/toast.dart';
+import 'package:nexxstore/services/auth_service.dart';
+import 'package:nexxstore/services/dto/user_dto.dart';
+import 'package:nexxstore/data/tables.dart';
+import 'package:nexxstore/ui/widgets/toast.dart';
 
 class RegisterScreen extends StatefulWidget {
   final AuthService authService;

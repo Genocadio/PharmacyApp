@@ -2,8 +2,8 @@ import 'dart:typed_data';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:nexxpharma/data/tables.dart';
-import 'package:nexxpharma/services/dto/stock_request_dto.dart';
+import 'package:nexxstore/data/tables.dart';
+import 'package:nexxstore/services/dto/stock_request_dto.dart';
 
 class StockRequestPDFService {
   static Future<Uint8List> generateRequestPDF(StockRequestDTO request) async {

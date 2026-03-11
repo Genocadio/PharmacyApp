@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:nexxpharma/data/database.dart';
-import 'package:nexxpharma/data/tables.dart';
-import 'package:nexxpharma/services/auth_service.dart';
-import 'package:nexxpharma/services/stock_request_service.dart';
-import 'package:nexxpharma/services/dto/stock_request_dto.dart';
+import 'package:nexxstore/data/database.dart';
+import 'package:nexxstore/data/tables.dart';
+import 'package:nexxstore/services/auth_service.dart';
+import 'package:nexxstore/services/stock_request_service.dart';
+import 'package:nexxstore/services/dto/stock_request_dto.dart';
 import 'package:intl/intl.dart';
-import 'package:nexxpharma/ui/modals/stock_request_edit_modal.dart';
-import 'package:nexxpharma/services/stock_request_pdf_service.dart';
+import 'package:nexxstore/ui/modals/stock_request_edit_modal.dart';
+import 'package:nexxstore/services/stock_request_pdf_service.dart';
 import 'package:printing/printing.dart';
-import 'package:nexxpharma/ui/widgets/toast.dart';
+import 'package:nexxstore/ui/widgets/toast.dart';
 
 class StockRequestScreen extends StatefulWidget {
   final AppDatabase database;

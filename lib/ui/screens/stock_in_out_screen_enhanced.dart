@@ -10,8 +10,8 @@
 // ============================================================================
 // Add this import at the top with other service imports:
 /*
-import 'package:nexxpharma/services/stock_action_service.dart';
-import 'package:nexxpharma/ui/widgets/stock_action_widgets.dart';
+import 'package:nexxstore/services/stock_action_service.dart';
+import 'package:nexxstore/ui/widgets/stock_action_widgets.dart';
 */
 
 // ============================================================================
@@ -358,18 +358,18 @@ StockInOutScreen(
 /*
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:nexxpharma/data/database.dart';
-import 'package:nexxpharma/data/tables.dart';
-import 'package:nexxpharma/services/stock_in_service.dart';
-import 'package:nexxpharma/services/stock_out_service.dart';
-import 'package:nexxpharma/services/stock_action_service.dart';  // NEW
-import 'package:nexxpharma/services/dto/stock_in_dto.dart';
-import 'package:nexxpharma/services/auth_service.dart';
-import 'package:nexxpharma/services/settings_service.dart';
-import 'package:nexxpharma/services/sync_service.dart';
-import 'package:nexxpharma/services/activation_service.dart';
-import 'package:nexxpharma/ui/widgets/stock_action_widgets.dart';  // NEW
-import 'package:nexxpharma/ui/widgets/toast.dart';
+import 'package:nexxstore/data/database.dart';
+import 'package:nexxstore/data/tables.dart';
+import 'package:nexxstore/services/stock_in_service.dart';
+import 'package:nexxstore/services/stock_out_service.dart';
+import 'package:nexxstore/services/stock_action_service.dart';  // NEW
+import 'package:nexxstore/services/dto/stock_in_dto.dart';
+import 'package:nexxstore/services/auth_service.dart';
+import 'package:nexxstore/services/settings_service.dart';
+import 'package:nexxstore/services/sync_service.dart';
+import 'package:nexxstore/services/activation_service.dart';
+import 'package:nexxstore/ui/widgets/stock_action_widgets.dart';  // NEW
+import 'package:nexxstore/ui/widgets/toast.dart';
 
 class StockInOutScreen extends StatefulWidget {
   final AppDatabase database;

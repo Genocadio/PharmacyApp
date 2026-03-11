@@ -2,7 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'tables.dart';
-import 'package:nexxpharma/services/dto/activation_dto.dart';
+import 'package:nexxstore/services/dto/activation_dto.dart';
 
 part 'database.g.dart';
 
@@ -59,7 +59,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   static QueryExecutor _openConnection() {
-    return driftDatabase(name: 'nexxpharma_db');
+    return driftDatabase(name: 'nexxstore_db');
   }
 
   // UUID generator

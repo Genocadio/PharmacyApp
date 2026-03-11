@@ -2,12 +2,12 @@ import 'dart:convert';
 
 import 'package:crypton/crypton.dart';
 import 'package:http/http.dart' as http;
-import 'package:nexxpharma/data/database.dart';
-import 'package:nexxpharma/data/tables.dart';
-import 'package:nexxpharma/services/dto/activation_dto.dart';
-import 'package:nexxpharma/services/dto/stock_in_dto.dart';
-import 'package:nexxpharma/services/exceptions/service_exceptions.dart';
-import 'package:nexxpharma/services/settings_service.dart';
+import 'package:nexxstore/data/database.dart';
+import 'package:nexxstore/data/tables.dart';
+import 'package:nexxstore/services/dto/activation_dto.dart';
+import 'package:nexxstore/services/dto/stock_in_dto.dart';
+import 'package:nexxstore/services/exceptions/service_exceptions.dart';
+import 'package:nexxstore/services/settings_service.dart';
 
 /// Service layer for Stock In management
 /// Handles business logic, validation, and DTO conversion

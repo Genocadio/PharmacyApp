@@ -1,4 +1,4 @@
-import 'package:nexxpharma/data/tables.dart';
+import 'package:nexxstore/data/tables.dart';
 
 class ModuleResponse {
   final int? id;

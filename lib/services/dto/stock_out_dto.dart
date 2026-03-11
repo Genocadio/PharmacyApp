@@ -1,4 +1,4 @@
-import 'package:nexxpharma/data/tables.dart';
+import 'package:nexxstore/data/tables.dart';
 
 /// DTO for creating a stock out item (flexible for different device types)
 class StockOutItemCreateDTO {

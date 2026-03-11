@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:nexxpharma/services/notification_service.dart';
-import 'package:nexxpharma/ui/widgets/toast_notification.dart';
+import 'package:nexxstore/services/notification_service.dart';
+import 'package:nexxstore/ui/widgets/toast_notification.dart';
 
 /// Overlay widget that displays all toast notifications
 /// Similar to React Toastify's container
